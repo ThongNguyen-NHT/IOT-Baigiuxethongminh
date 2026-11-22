@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập | Smart Parking IoT</title>
+  <link rel="stylesheet" href="style.css?v=20261121-1">
+  <style>
+    .login-container {
+      max-width: 960px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    .hero-banner {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .hero-banner h1 {
+      font-size: 2.2rem;
+      color: #102238;
+      margin-bottom: 8px;
+    }
+    .hero-banner p {
+      color: #637187;
+      font-size: 1.05rem;
+    }
+    .quick-access-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    .quick-btn-card {
+      background: #ffffff;
+      border: 1px solid #dde5ef;
+      border-radius: 14px;
+      padding: 20px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(18, 32, 54, 0.04);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .quick-btn-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(23, 105, 224, 0.15);
+      border-color: #1769e0;
+    }
+    .role-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 99px;
+      margin-bottom: 12px;
+      width: fit-content;
+    }
+    .role-admin { background: #fee2e2; color: #dc2626; }
+    .role-staff { background: #fef3c7; color: #d97706; }
+    .role-customer { background: #e0f2fe; color: #0284c7; }
+    .demo-hero-card {
+      background: linear-gradient(135deg, #1e3a8a, #2563eb);
+      color: white;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
+    }
+    .demo-hero-card h2 { margin: 0 0 6px 0; color: #ffffff; font-size: 1.4rem; }
+    .demo-hero-card p { margin: 0; color: #bfdbfe; font-size: 0.95rem; }
+    .btn-demo-glow {
+      background: #ffffff;
+      color: #1e3a8a;
+      font-weight: 700;
+      padding: 12px 24px;
+      border-radius: 10px;
+      border: none;
+      font-size: 1rem;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .btn-demo-glow:hover {
+      background: #f8fafc;
+      transform: scale(1.04);
+      box-shadow: 0 4px 15px rgba(255, 255, 255, 0.4);
+    }
+    .manual-login-card {
+      background: #ffffff;
+      border: 1px solid #dde5ef;
+      border-radius: 16px;
+      padding: 28px;
+      max-width: 440px;
+      margin: 0 auto;
+      box-shadow: 0 4px 16px rgba(18, 32, 54, 0.05);
+    }
+    .form-group {
+      margin-bottom: 16px;
+      text-align: left;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #334155;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    .btn-submit {
+      width: 100%;
+      padding: 12px;
+      background: #1769e0;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+    .btn-submit:hover {
+      background: #1554be;
+    }
+    .login-error {
+      color: #dc2626;
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      margin-top: 12px;
+      display: none;
+    }
+    .footer-note {
+      text-align: center;
+      margin-top: 36px;
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body style="background: #f8fafc;">
+  <div class="login-container">
+    <div class="hero-banner">
+      <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 16px; background: #1769e0; color: white; font-size: 2rem; font-weight: 800; margin-bottom: 12px;">P</div>
+      <h1>Hệ thống Bãi đỗ xe Thông minh</h1>
+      <p>Mô phỏng IoT Smart Parking - Đồ án Tốt nghiệp / Cuối kỳ 2026</p>
+    </div>
+
+    <!-- Bảng điều khiển Demo Nhanh -->
+    <div class="demo-hero-card">
+      <div>
+        <h2>🚀 Bảng Điều Khiển DEMO (Không cần đăng nhập)</h2>
+        <p>Mô phỏng trực quan sơ đồ 40 ô, tua thời gian, đỗ xe vào/ra, mất điện LWT, quét cổng và kiểm thử toàn bộ nghiệp vụ.</p>
+      </div>
+      <button class="btn-demo-glow" onclick="window.location.href='demo.html'">Mở Bảng DEMO →</button>
+    </div>
+
+    <h3 style="margin-bottom: 14px; color: #1e293b; font-size: 1.1rem;">⚡ Chọn nhanh tài khoản để kiểm tra giao diện:</h3>
+    
+    <div class="quick-access-grid">
+      <!-- Admin -->
+      <div class="quick-btn-card" onclick="quickLogin('admin', 'Admin@123', 'admin.html')">
+        <div>
+          <span class="role-badge role-admin">Quản trị viên (Admin)</span>
+          <strong style="display: block; font-size: 1.05rem; color: #0f172a;">admin</strong>
+          <span style="color: #64748b; font-size: 0.85rem;">Sơ đồ 40 ô realtime, điều khiển barie, nhật ký & thống kê</span>
+        </div>
+        <div style="margin-top: 16px; color: #dc2626; font-size: 0.85rem; font-weight: 600;">Vào Quản trị →</div>
+      </div>
+
+      <!-- Staff -->
+      <div class="quick-btn-card" onclick="quickLogin('staff01', 'Staff@123', 'staff.html')">
+        <div>
+          <span class="role-badge role-staff">Nhân viên trực bãi</span>
+          <strong style="display: block; font-size: 1.05rem; color: #0f172a;">staff01</strong>
+          <span style="color: #64748b; font-size: 0.85rem;">Thu tiền mặt, sinh CashCode, mở khóa mã, xử lý quá giờ</span>
+        </div>
+        <div style="margin-top: 16px; color: #d97706; font-size: 0.85rem; font-weight: 600;">Vào Nhân viên →</div>
+      </div>
+
+      <!-- Customer 01 -->
+      <div class="quick-btn-card" onclick="quickLogin('customer01', 'Customer@123', 'customer.html')">
+        <div>
+          <span class="role-badge role-customer">Khách hàng 01</span>
+          <strong style="display: block; font-size: 1.05rem; color: #0f172a;">customer01</strong>
+          <span style="color: #64748b; font-size: 0.85rem;">App PWA, đặt chỗ, chọn ô, thanh toán QR/tiền mặt, dẫn đường</span>
+        </div>
+        <div style="margin-top: 16px; color: #0284c7; font-size: 0.85rem; font-weight: 600;">Vào Khách hàng 1 →</div>
+      </div>
+
+      <!-- Customer 02 -->
+      <div class="quick-btn-card" onclick="quickLogin('customer02', 'Customer02@123', 'customer.html')">
+        <div>
+          <span class="role-badge role-customer">Khách hàng 02 (Test chéo)</span>
+          <strong style="display: block; font-size: 1.05rem; color: #0f172a;">customer02</strong>
+          <span style="color: #64748b; font-size: 0.85rem;">Kiểm tra phân quyền sở hữu đơn, chống hủy/đọc nhầm đơn</span>
+        </div>
+        <div style="margin-top: 16px; color: #0284c7; font-size: 0.85rem; font-weight: 600;">Vào Khách hàng 2 →</div>
+      </div>
+    </div>
+
+    <!-- Đăng nhập thủ công -->
+    <div class="manual-login-card">
+      <h3 style="margin-top: 0; margin-bottom: 16px; text-align: center; color: #1e293b;">Đăng nhập thủ công</h3>
+      <form id="loginForm" onsubmit="handleManualLogin(event)">
+        <div class="form-group">
+          <label for="username">Tên đăng nhập</label>
+          <input type="text" id="username" required placeholder="admin, staff01, customer01..." value="admin">
+        </div>
+        <div class="form-group">
+          <label for="password">Mật khẩu</label>
+          <input type="password" id="password" required placeholder="••••••••" value="Admin@123">
+        </div>
+        <button type="submit" class="btn-submit" id="btnLogin">Đăng nhập</button>
+        <div id="loginError" class="login-error"></div>
+      </form>
+    </div>
+
+    <div class="footer-note">
+      Backend Web API đang phục vụ tại <code>http://localhost:5137</code> | Đã tích hợp SignalR Realtime
+    </div>
+  </div>
+
+  <script>
+    async function quickLogin(username, password, redirectUrl) {
+      const btn = event.currentTarget;
+      const originalText = btn.innerHTML;
+      btn.style.opacity = '0.6';
+      btn.style.pointerEvents = 'none';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert('Đăng nhập thất bại: ' + (err.message || res.statusText));
+          return;
+        }
+
+        const data = await res.json();
+        localStorage.setItem('smartParkingToken', data.accessToken);
+        localStorage.setItem('smartParkingUser', JSON.stringify({
+          username: data.username,
+          role: data.role
+        }));
+
+        window.location.href = redirectUrl;
+      } catch (e) {
+        alert('Lỗi kết nối máy chủ: ' + e.message);
+      } finally {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+      }
+    }
+
+    async function handleManualLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value;
+      const errBox = document.getElementById('loginError');
+      const btn = document.getElementById('btnLogin');
+
+      errBox.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Đang xử lý...';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          errBox.textContent = err.message || 'Tên đăng nhập hoặc mật khẩu không chính xác.';
+          errBox.style.display = 'block';
+          return;
+        }
+
+        const data = await res.json();
+        localStorage.setItem('smartParkingToken', data.accessToken);
+        localStorage.setItem('smartParkingUser', JSON.stringify({
+          username: data.username,
+          role: data.role
+        }));
+
+        if (data.role === 'Admin') window.location.href = 'admin.html';
+        else if (data.role === 'Staff') window.location.href = 'staff.html';
+        else window.location.href = 'customer.html';
+      } catch (err) {
+        errBox.textContent = 'Không thể kết nối đến máy chủ: ' + err.message;
+        errBox.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Đăng nhập';
+      }
+    }
+  </script>
+</body>
+</html>

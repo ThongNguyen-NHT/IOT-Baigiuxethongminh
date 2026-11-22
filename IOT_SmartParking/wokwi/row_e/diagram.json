@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "author": "IoT Smart Parking Team",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-neopixel",
+      "id": "pixels_row_e",
+      "top": -80,
+      "left": -220,
+      "attrs": { "pixels": "8" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e1",
+      "top": -260,
+      "left": 280,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e2",
+      "top": -140,
+      "left": 280,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e3",
+      "top": -20,
+      "left": 280,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e4",
+      "top": 100,
+      "left": 280,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e5",
+      "top": -260,
+      "left": 580,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e6",
+      "top": -140,
+      "left": 580,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e7",
+      "top": -20,
+      "left": 580,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e8",
+      "top": 100,
+      "left": 580,
+      "attrs": { "distance": "200" }
+    }
+  ],
+  "connections": [
+    [ "esp:23", "sensor_e1:TRIG", "green", [] ],
+    [ "esp:35", "sensor_e1:ECHO", "blue", [] ],
+    [ "esp:VIN", "sensor_e1:VCC", "red", [] ],
+    [ "esp:GND.1", "sensor_e1:GND", "black", [] ],
+
+    [ "esp:23", "sensor_e2:TRIG", "green", [] ],
+    [ "esp:36", "sensor_e2:ECHO", "blue", [] ],
+    [ "esp:VIN", "sensor_e2:VCC", "red", [] ],
+    [ "esp:GND.1", "sensor_e2:GND", "black", [] ],
+
+    [ "esp:23", "sensor_e3:TRIG", "green", [] ],
+    [ "esp:39", "sensor_e3:ECHO", "blue", [] ],
+    [ "esp:VIN", "sensor_e3:VCC", "red", [] ],
+    [ "esp:GND.1", "sensor_e3:GND", "black", [] ],
+
+    [ "esp:23", "sensor_e4:TRIG", "green", [] ],
+    [ "esp:13", "sensor_e4:ECHO", "blue", [] ],
+    [ "esp:VIN", "sensor_e4:VCC", "red", [] ],
+    [ "esp:GND.1", "sensor_e4:GND", "black", [] ],
+
+    [ "esp:23", "sensor_e5:TRIG", "green", [] ],
+    [ "esp:14", "sensor_e5:ECHO", "blue", [] ],
+    [ "esp:VIN", "sensor_e5:VCC", "red", [] ],
+    [ "esp:GND.1", "sensor_e5:GND", "black", [] ],
+
+    [ "esp:23", "sensor_e6:TRIG", "green", [] ],
+    [ "esp:25", "sensor_e6:ECHO", "blue", [] ],
+    [ "esp:VIN", "sensor_e6:VCC", "red", [] ],
+    [ "esp:GND.1", "sensor_e6:GND", "black", [] ],
+
+    [ "esp:23", "sensor_e7:TRIG", "green", [] ],
+    [ "esp:26", "sensor_e7:ECHO", "blue", [] ],
+    [ "esp:VIN", "sensor_e7:VCC", "red", [] ],
+    [ "esp:GND.1", "sensor_e7:GND", "black", [] ],
+
+    [ "esp:23", "sensor_e8:TRIG", "green", [] ],
+    [ "esp:27", "sensor_e8:ECHO", "blue", [] ],
+    [ "esp:VIN", "sensor_e8:VCC", "red", [] ],
+    [ "esp:GND.1", "sensor_e8:GND", "black", [] ],
+
+    [ "esp:33", "pixels_row_e:DIN", "purple", [] ],
+    [ "esp:VIN", "pixels_row_e:VDD", "red", [] ],
+    [ "esp:GND.1", "pixels_row_e:VSS", "black", [] ]
+  ],
+  "serialMonitor": {
+    "display": "terminal",
+    "convertEol": true
+  },
+  "dependencies": {}
+}

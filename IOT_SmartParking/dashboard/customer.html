@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Khách Hàng | Smart Parking IoT</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1769e0">
+  <link rel="stylesheet" href="style.css?v=20261121-2">
+  <!-- SignalR Client -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+  <!-- QRCode Generator CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding-bottom: 60px;
+    }
+    .mobile-container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .customer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+      margin-bottom: 16px;
+    }
+
+    /* SIGNALR BADGE */
+    .signalr-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .signalr-badge.connected {
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+    }
+    .signalr-badge.reconnecting {
+      background: #fffbeb;
+      color: #d97706;
+      border: 1px solid #fde68a;
+    }
+    .signalr-badge.disconnected {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+    .signalr-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .user-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .user-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #10b981;
+    }
+    .tab-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: 12px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #ffffff;
+      color: #1769e0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.04);
+      margin-bottom: 16px;
+      border: 1px solid #e2e8f0;
+    }
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #475569;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .form-control {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 11px;
+      font-size: 0.95rem;
+      color: #0f172a;
+      background: #f8fafc;
+      transition: border 0.2s;
+      box-sizing: border-box;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: #1769e0;
+      background: #ffffff;
+    }
+    .duration-pills {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .duration-btn {
+      padding: 12px 8px;
+      text-align: center;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 11px;
+      background: #ffffff;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #334155;
+      transition: all 0.2s;
+    }
+    .duration-btn.selected {
+      border-color: #1769e0;
+      background: #eff6ff;
+      color: #1769e0;
+      box-shadow: 0 0 0 2px rgba(23,105,224,0.2);
+    }
+    .duration-btn strong { display: block; font-size: 1.05rem; }
+    .duration-btn span { font-size: 0.75rem; color: #64748b; }
+
+    /* Sơ đồ 40 ô */
+    .slot-map-container {
+      margin-top: 14px;
+    }
+    .slot-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.75rem;
+      margin-bottom: 12px;
+      color: #475569;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+    }
+    .dot-free { background: #10b981; }
+    .dot-held { background: #f59e0b; }
+    .dot-booked { background: #64748b; }
+    .dot-future { background: #8b5cf6; }
+    .dot-selected { background: #1769e0; box-shadow: 0 0 0 2px #93c5fd; }
+
+    .grid-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .row-label {
+      width: 24px;
+      font-weight: 800;
+      font-size: 0.85rem;
+      color: #334155;
+      text-align: center;
+    }
+    .slots-in-row {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 6px;
+      flex: 1;
+    }
+    .slot-node {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      border: 1.5px solid #cbd5e1;
+      background: #f8fafc;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+      position: relative;
+    }
+    .slot-node.free {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #065f46;
+    }
+    .slot-node.free:hover {
+      transform: scale(1.05);
+      border-color: #10b981;
+    }
+    .slot-node.held {
+      background: #fffbeb;
+      border-color: #fde68a;
+      color: #92400e;
+      cursor: not-allowed;
+    }
+    .slot-node.booked, .slot-node.occupied {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+      color: #94a3b8;
+      cursor: not-allowed;
+    }
+    .slot-node.booked-future {
+      background: #f5f3ff;
+      border-color: #ddd6fe;
+      color: #6d28d9;
+    }
+    .slot-node.guiding {
+      background: #e0f2fe;
+      border-color: #7dd3fc;
+      color: #0369a1;
+      animation: pulse 1.5s infinite;
+    }
+    .slot-node.selected {
+      background: #1769e0 !important;
+      border-color: #1d4ed8 !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 10px rgba(23,105,224,0.5);
+      transform: scale(1.08);
+      z-index: 2;
+    }
+    .slot-node.path-glow {
+      background: #00e5ff !important;
+      color: #000000 !important;
+      border-color: #00b4d8 !important;
+      box-shadow: 0 0 14px #00e5ff, inset 0 0 8px #ffffff;
+      animation: neonGlow 1s ease-in-out infinite alternate;
+    }
+    @keyframes neonGlow {
+      from { box-shadow: 0 0 8px #00e5ff; }
+      to { box-shadow: 0 0 20px #00e5ff, 0 0 10px #38bdf8; }
+    }
+    .physical-badge {
+      font-size: 0.6rem;
+      background: #e2e8f0;
+      padding: 1px 4px;
+      border-radius: 4px;
+      margin-left: 4px;
+      color: #475569;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      background: #1769e0;
+      color: #ffffff;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(23,105,224,0.3);
+      transition: all 0.2s;
+    }
+    .btn-primary:hover {
+      background: #1255b8;
+      transform: translateY(-1px);
+    }
+    .btn-primary:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+    .btn-secondary {
+      width: 100%;
+      padding: 12px;
+      border-radius: 11px;
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: 1px solid #cbd5e1;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .btn-danger {
+      background: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fca5a5;
+    }
+    .btn-emergency {
+      background: #f59e0b;
+      color: #ffffff;
+      border: none;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 12px;
+      border-radius: 11px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+      animation: pulse 2s infinite;
+    }
+
+    /* Đồng hồ đếm ngược */
+    .timer-card {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      color: #ffffff;
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(15,23,42,0.2);
+    }
+    .timer-header {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .timer-countdown {
+      font-size: 2.2rem;
+      font-weight: 800;
+      font-family: ui-monospace, monospace;
+      color: #38bdf8;
+      letter-spacing: -0.02em;
+    }
+    .timer-sub {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      margin-top: 4px;
+    }
+
+    /* QR Code Display */
+    .qr-box {
+      background: #ffffff;
+      border: 2px dashed #94a3b8;
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      margin: 16px 0;
+    }
+    .entry-code-text {
+      font-size: 2.4rem;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      color: #1769e0;
+      font-family: monospace;
+      margin: 10px 0;
+    }
+    #qrcodeCanvas {
+      display: flex;
+      justify-content: center;
+      margin: 12px auto;
+    }
+
+    /* Payment Methods */
+    .payment-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .pay-tab-btn {
+      padding: 12px;
+      border-radius: 11px;
+      border: 1.5px solid #cbd5e1;
+      background: #ffffff;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      color: #475569;
+    }
+    .pay-tab-btn.active {
+      border-color: #1769e0;
+      background: #eff6ff;
+      color: #1769e0;
+    }
+    .bank-info-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 0.88rem;
+      margin-bottom: 14px;
+    }
+    .bank-info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+
+    /* Đơn hàng của tôi */
+    .booking-item-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .booking-item-card:hover {
+      border-color: #1769e0;
+      box-shadow: 0 4px 12px rgba(23,105,224,0.08);
+    }
+    .booking-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .status-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 99px;
+    }
+    .status-PENDING_PAYMENT { background: #fef3c7; color: #b45309; }
+    .status-PAID { background: #dcfce7; color: #15803d; }
+    .status-ENTERED { background: #e0f2fe; color: #0369a1; }
+    .status-PARKED { background: #ede9fe; color: #6d28d9; }
+    .status-COMPLETED { background: #f1f5f9; color: #475569; }
+    .status-EXPIRED, .status-NO_SHOW, .status-CANCELLED { background: #fee2e2; color: #b91c1c; }
+
+    /* Toast */
+    #custToast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+      z-index: 9999;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      max-width: 90%;
+      text-align: center;
+    }
+    #custToast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="mobile-container">
+    <!-- Header -->
+    <header class="customer-header">
+      <div class="user-pill">
+        <span class="user-dot"></span>
+        <span id="txtUsername">customer01</span>
+        <span style="font-size: 0.75rem; color: #64748b;">(Khách hàng)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <div id="customerSignalRBadge" class="signalr-badge connected"><span class="signalr-dot"></span> Đã kết nối</div>
+        <button onclick="syncCustomerData()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #0284c7; background: #e0f2fe; color: #0369a1; font-weight:600; cursor: pointer;">🔄 Đồng bộ lại</button>
+        <button onclick="switchCustomer()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer;">Đổi user</button>
+        <button onclick="logout()" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #fee2e2; background: #fff; color: #dc2626; cursor: pointer;">Thoát</button>
+      </div>
+    </header>
+
+    <!-- Tab navigation -->
+    <nav class="tab-bar">
+      <button class="tab-btn active" id="tabBtnNew" onclick="switchTab('new')">🅿️ Đặt chỗ mới</button>
+      <button class="tab-btn" id="tabBtnActive" onclick="switchTab('active')">🎫 Vé của tôi (<span id="activeCount">0</span>)</button>
+      <button class="tab-btn" id="tabBtnHistory" onclick="switchTab('history')">📜 Lịch sử</button>
+    </nav>
+
+    <!-- SECTION 1: ĐẶT CHỖ MỚI -->
+    <div id="sectionNew">
+      <div class="card">
+        <div class="card-title">
+          <span>Thông tin đặt chỗ</span>
+          <span style="font-size: 0.8rem; font-weight: normal; color: #64748b;">Khung giờ & Vị trí</span>
+        </div>
+
+        <!-- Giờ hẹn T -->
+        <div class="form-group">
+          <label>Giờ hẹn đến bãi (T)</label>
+          <input type="datetime-local" id="inputHenT" class="form-control" onchange="loadSlotsForTargetTime()">
+          <small style="color: #64748b; font-size: 0.78rem;">Hệ thống giữ ô đến T+15 phút sau giờ hẹn.</small>
+        </div>
+
+        <!-- Gói thời lượng -->
+        <div class="form-group">
+          <label>Gói thời lượng gửi xe</label>
+          <div class="duration-pills">
+            <div class="duration-btn selected" onclick="selectDuration(1, 20000, this)">
+              <strong>1 Giờ</strong>
+              <span>20.000 đ</span>
+            </div>
+            <div class="duration-btn" onclick="selectDuration(2, 40000, this)">
+              <strong>2 Giờ</strong>
+              <span>40.000 đ</span>
+            </div>
+            <div class="duration-btn" onclick="selectDuration(4, 80000, this)">
+              <strong>4 Giờ</strong>
+              <span>80.000 đ</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Biển số xe -->
+        <div class="form-group">
+          <label>Biển số xe của bạn</label>
+          <input type="text" id="inputBienSo" class="form-control" placeholder="Ví dụ: 51H-999.88" value="51H-999.88">
+        </div>
+
+        <!-- Sơ đồ 40 ô đỗ xe -->
+        <div class="slot-map-container">
+          <label style="font-size: 0.82rem; font-weight: 700; color: #475569; text-transform: uppercase;">
+            Chọn vị trí đỗ (40 ô) - Đang chọn: <span id="txtSelectedSlot" style="color: #1769e0; font-size: 1rem;">Chưa chọn</span>
+          </label>
+
+          <div class="slot-legend" style="margin-top: 8px;">
+            <div class="legend-item"><span class="legend-dot dot-free"></span> Ô trống</div>
+            <div class="legend-item"><span class="legend-dot dot-held"></span> Đang giữ</div>
+            <div class="legend-item"><span class="legend-dot dot-booked"></span> Đã đặt</div>
+            <div class="legend-item"><span class="legend-dot dot-future"></span> Đặt tương lai</div>
+            <div class="legend-item"><span class="legend-dot dot-selected"></span> Bạn chọn</div>
+          </div>
+
+          <div id="customerSlotGrid" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px;">
+            <!-- Render 5 hàng A-E, 8 ô/hàng -->
+          </div>
+        </div>
+
+        <!-- Tóm tắt & Nút đặt chỗ -->
+        <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 0.78rem; color: #64748b;">Tổng thanh toán</div>
+            <div id="txtTotalPrice" style="font-size: 1.4rem; font-weight: 800; color: #1769e0;">20.000 đ</div>
+          </div>
+          <button id="btnSubmitBooking" class="btn-primary" style="width: auto; padding: 12px 24px;" onclick="submitCreateBooking()">
+            Giữ chỗ ngay →
+          </button>
+        </div>
+      </div>
+
+      <!-- Khung hiển thị quy định & chính sách bãi xe -->
+      <div class="card" style="background:#f8fafc;border-left:4px solid #1769e0;margin-top:16px;">
+        <div class="card-title" style="font-size:0.95rem;margin-bottom:10px;">
+          <span>📜 Quy Định & Chính Sách Bãi Xe</span>
+        </div>
+        <div style="font-size:0.83rem;color:#334155;line-height:1.6;">
+          <div style="margin-bottom:6px;">⏱️ <b>Hạn thanh toán:</b> 5 phút kể từ lúc giữ ô. Quá 5 phút đơn tự hủy (EXPIRED) và nhả ô.</div>
+          <div style="margin-bottom:6px;">🕒 <b>Khung giờ check-in:</b> Từ T-15 phút đến T+15 phút (T là giờ hẹn). Quá T+15 phút chuyển sang NO_SHOW.</div>
+          <div style="margin-bottom:6px;">🚫 <b>Chính sách không hoàn tiền:</b> Đơn bị NO_SHOW không được hoàn tiền để bảo đảm công bằng.</div>
+          <div style="margin-bottom:6px;">🚗 <b>Thời gian vào ô:</b> 10 phút sau khi qua barie cổng vào. Nếu kẹt xe nội bộ, bấm nút "Tôi đang kẹt xe" để gia hạn thêm 5 phút.</div>
+          <div>⚠️ <b>Quá hạn đỗ (OVERSTAY):</b> Gửi quá gói giờ đã mua bị tạm khóa barie cổng ra và thu phí phạt <b>200 VNĐ/phút</b> trước khi mở cổng.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: VÉ CỦA TÔI & THANH TOÁN (ACTIVE TICKET) -->
+    <div id="sectionActive" style="display: none;">
+      <!-- Khung đồng hồ đếm ngược -->
+      <div id="timerCard" class="timer-card" style="display: none;">
+        <div class="timer-header">
+          <span id="timerLabel">HẠN THANH TOÁN</span>
+          <span id="timerOrderCode">#0</span>
+        </div>
+        <div class="timer-countdown" id="timerCount">05:00</div>
+        <div class="timer-sub" id="timerDesc">Vui lòng thanh toán trước khi hết hạn để không bị hủy chỗ.</div>
+        
+        <!-- Nút cứu nguy kẹt xe -->
+        <div id="jamActionBox" style="margin-top: 12px; display: none;">
+          <button class="btn-emergency" style="width: 100%;" onclick="reportTrafficJam()">
+            🚨 Tôi đang kẹt xe (Gia hạn thêm 5 phút)
+          </button>
+        </div>
+      </div>
+
+      <!-- Khung thanh toán (Khi đơn PENDING_PAYMENT) -->
+      <div id="cardPayment" class="card" style="display: none;">
+        <div class="card-title">
+          <span>Thanh toán giữ chỗ</span>
+          <span id="payAmountBadge" style="color: #1769e0; font-size: 1.1rem; font-weight: 800;">20.000 đ</span>
+        </div>
+
+        <div class="payment-tabs">
+          <button id="payTabBank" class="pay-tab-btn active" onclick="switchPayTab('bank')">Chuyển khoản</button>
+          <button id="payTabCash" class="pay-tab-btn" onclick="switchPayTab('cash')">Tiền mặt tại quầy</button>
+        </div>
+
+        <!-- Phương thức Chuyển khoản -->
+        <div id="payContentBank">
+          <div class="bank-info-box">
+            <div class="bank-info-row"><span>Ngân hàng:</span><strong>Vietcombank (Demo)</strong></div>
+            <div class="bank-info-row"><span>Số tài khoản:</span><strong>9999 8888 66</strong></div>
+            <div class="bank-info-row"><span>Chủ tài khoản:</span><strong>SMART PARKING IOT</strong></div>
+            <div class="bank-info-row"><span>Số tiền:</span><strong id="bankPayAmount" style="color:#1769e0;">20.000 đ</strong></div>
+            <div class="bank-info-row"><span>Nội dung CK:</span><strong id="bankTxCode" style="color:#dc2626; font-family: monospace;">TX-ORDER</strong></div>
+          </div>
+
+          <div style="text-align: center; margin: 12px 0;">
+            <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 6px;">Mã QR chuyển khoản thanh toán:</div>
+            <div id="bankQrCanvas" style="display:flex; justify-content:center;"></div>
+          </div>
+
+          <button class="btn-primary" onclick="simulateBankTransfer()">
+            ✅ Tôi đã chuyển khoản (Mô phỏng thanh toán)
+          </button>
+        </div>
+
+        <!-- Phương thức Tiền mặt -->
+        <div id="payContentCash" style="display: none;">
+          <div class="bank-info-box" style="background: #fffbeb; border-color: #fef3c7;">
+            <p style="margin: 0; color: #92400e; font-size: 0.88rem;">
+              💵 <strong>Thanh toán tiền mặt:</strong> Vui lòng đến gặp nhân viên trực cổng hoặc quầy thu ngân. Đọc mã đơn <strong id="cashOrderIdText">#0</strong> và nộp số tiền. Nhân viên sẽ cấp cho bạn một <strong>mã CashCode 6 ký tự Crockford (chữ và số)</strong>.
+            </p>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label>Nhập mã CashCode nhận từ nhân viên</label>
+            <input type="text" id="inputCashCode" class="form-control" placeholder="Ví dụ: 8QE5V3" maxlength="10" style="font-size: 1.3rem; letter-spacing: 0.2em; text-align: center; font-weight: 800; text-transform: uppercase;">
+          </div>
+
+          <button class="btn-primary" onclick="redeemCashCode()">
+            Xác nhận mã CashCode →
+          </button>
+        </div>
+
+        <!-- Nút hủy đơn chưa thanh toán -->
+        <button class="btn-secondary btn-danger" onclick="cancelCurrentBooking()" style="margin-top: 14px;">
+          ✕ Hủy đơn đặt chỗ này
+        </button>
+      </div>
+
+      <!-- Khung Vé đỗ xe thông minh (Khi đơn PAID / ENTERED / PARKED) -->
+      <div id="cardTicket" class="card" style="display: none;">
+        <div class="card-title">
+          <span>Vé Đỗ Xe Điện Tử</span>
+          <span id="ticketStatusBadge" class="status-badge status-PAID">PAID</span>
+        </div>
+
+        <div class="qr-box">
+          <div style="font-size: 0.8rem; color: #64748b;">MÃ QUÉT TẠI CỔNG VÀO (ENTRY CODE)</div>
+          <div id="txtEntryCode" class="entry-code-text">------</div>
+          <div id="qrcodeCanvas"></div>
+          <div style="font-size: 0.78rem; color: #64748b; margin-top: 8px;">Đưa mã này trước camera barie để mở cổng</div>
+        </div>
+
+        <div style="background: #f8fafc; border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+          <div class="bank-info-row"><span>Biển số xe:</span><strong id="ticketPlate">51H-999.88</strong></div>
+          <div class="bank-info-row"><span>Vị trí đỗ xe:</span><strong id="ticketSlot" style="color: #1769e0; font-size: 1.1rem;">E7</strong></div>
+          <div class="bank-info-row"><span>Giờ hẹn đến:</span><span id="ticketTimeT">--:--</span></div>
+          <div class="bank-info-row"><span>Thời lượng:</span><span id="ticketDuration">1 giờ</span></div>
+          <div class="bank-info-row"><span>Hạn gửi đến:</span><span id="ticketEndTime">--:--</span></div>
+        </div>
+
+        <!-- Dẫn đường vào ô -->
+        <button id="btnGuide" class="btn-primary" style="background: #0284c7; box-shadow: 0 4px 14px rgba(2,132,199,0.3);" onclick="triggerRouteGuidance()">
+          🧭 Bật dải LED dẫn đường tới ô này
+        </button>
+        <div id="guideHintText" style="font-size: 0.78rem; color: #64748b; margin-top: 6px; text-align: center;"></div>
+
+        <!-- Sơ đồ đường đi mô phỏng -->
+        <div id="guideRouteMapBox" style="margin-top: 16px; display: none;">
+          <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 8px; color: #0369a1;">
+            💡 Đường dẫn dải LED NeoPixel (Đang sáng dẫn tới ô <span id="guideSlotText"></span>):
+          </div>
+          <div id="guideMiniMap" style="background: #0f172a; border-radius: 12px; padding: 10px;">
+            <!-- Sơ đồ mini highlight đường đi -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Thông báo khi chưa có đơn nào -->
+      <div id="emptyActiveTicket" class="card" style="text-align: center; padding: 40px 20px; display: none;">
+        <div style="font-size: 2.5rem; margin-bottom: 10px;">🅿️</div>
+        <h3 style="margin-bottom: 6px;">Bạn chưa có vé đỗ xe nào</h3>
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">Hãy đặt chỗ trước để bãi xe chuẩn bị ô đỗ sẵn sàng cho bạn.</p>
+        <button class="btn-primary" style="width: auto; padding: 10px 24px;" onclick="switchTab('new')">Đặt chỗ ngay</button>
+      </div>
+    </div>
+
+    <!-- SECTION 3: LỊCH SỬ ĐƠN HÀNG -->
+    <div id="sectionHistory" style="display: none;">
+      <div class="card">
+        <div class="card-title">
+          <span>Lịch sử đặt chỗ</span>
+          <button onclick="loadMyBookings()" style="font-size: 0.78rem; border: none; background: transparent; color: #1769e0; cursor: pointer; font-weight: 600;">Làm mới ↻</button>
+        </div>
+        <div id="historyBookingList">
+          <p style="text-align: center; color: #64748b; padding: 20px;">Đang tải danh sách...</p>
+        </div>
+      </div>
+
+      <!-- Khung hiển thị quy định & chính sách bãi xe -->
+      <div class="card" style="background:#f8fafc;border-left:4px solid #1769e0;margin-top:16px;">
+        <div class="card-title" style="font-size:0.95rem;margin-bottom:10px;">
+          <span>📜 Quy Định & Chính Sách Bãi Xe</span>
+        </div>
+        <div style="font-size:0.83rem;color:#334155;line-height:1.6;">
+          <div style="margin-bottom:6px;">⏱️ <b>Hạn thanh toán:</b> 5 phút kể từ lúc giữ ô. Quá 5 phút đơn tự hủy (EXPIRED) và nhả ô.</div>
+          <div style="margin-bottom:6px;">🕒 <b>Khung giờ check-in:</b> Từ T-15 phút đến T+15 phút (T là giờ hẹn). Quá T+15 phút chuyển sang NO_SHOW.</div>
+          <div style="margin-bottom:6px;">🚫 <b>Chính sách không hoàn tiền:</b> Đơn bị NO_SHOW không được hoàn tiền để bảo đảm công bằng.</div>
+          <div style="margin-bottom:6px;">🚗 <b>Thời gian vào ô:</b> 10 phút sau khi qua barie cổng vào. Nếu kẹt xe nội bộ, bấm nút "Tôi đang kẹt xe" để gia hạn thêm 5 phút.</div>
+          <div>⚠️ <b>Quá hạn đỗ (OVERSTAY):</b> Gửi quá gói giờ đã mua bị tạm khóa barie cổng ra và thu phí phạt <b>200 VNĐ/phút</b> trước khi mở cổng.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="custToast">Thông báo</div>
+
+  <script>
+    // Khởi tạo PWA Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW fail:', err));
+      });
+    }
+
+    // State ứng dụng
+    let currentToken = localStorage.getItem('smartParkingToken');
+    let currentUser = JSON.parse(localStorage.getItem('smartParkingUser') || '{"username":"customer01","role":"Customer"}');
+    let selectedSlotId = null;
+    let selectedDurationHours = 1;
+    let selectedPrice = 20000;
+    let currentActiveOrder = null;
+    let timerInterval = null;
+    let signalrConnection = null;
+    let hasAlerted2Min = false;
+
+    function syncCustomerData() {
+      loadSlotsForTargetTime();
+      loadMyBookings();
+      showToast('🔄 Đã đồng bộ lại dữ liệu vé và sơ đồ ô!');
+    }
+
+    function getVietnameseStatus(st) {
+      const map = {
+        'DRAFT': 'Bản nháp',
+        'PENDING_PAYMENT': 'Chờ thanh toán',
+        'PAID': 'Đã thanh toán',
+        'ENTERED': 'Đã qua cổng vào',
+        'PARKED': 'Đang đỗ trong ô',
+        'COMPLETED': 'Hoàn tất',
+        'EXPIRED': 'Hết hạn thanh toán',
+        'NO_SHOW': 'Vắng mặt (Không hoàn tiền)',
+        'ABANDONED': 'Vào rồi ra ngay',
+        'OVERSTAY': 'Quá hạn đỗ (Chờ nộp phạt)',
+        'CANCELLED': 'Đã hủy'
+      };
+      return map[st] || st;
+    }
+
+    // Khởi chạy khi load trang
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Kiểm tra đăng nhập
+      if (!currentToken) {
+        window.location.href = '/index.html';
+        return;
+      }
+
+      document.getElementById('txtUsername').textContent = currentUser.username || 'customer01';
+
+      // Thiết lập giờ hẹn mặc định: Giờ hiện tại làm tròn 5 phút kế tiếp
+      initDefaultDateTime();
+
+      // Kết nối SignalR Realtime
+      initSignalR();
+
+      // Tải sơ đồ ô và danh sách vé
+      await loadSlotsForTargetTime();
+      await loadMyBookings();
+    });
+
+    function showToast(msg) {
+      const t = document.getElementById('custToast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function initDefaultDateTime() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() + 10);
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('inputHenT').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    function selectDuration(hours, price, el) {
+      selectedDurationHours = hours;
+      selectedPrice = price;
+      document.querySelectorAll('.duration-btn').forEach(b => b.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('txtTotalPrice').textContent = price.toLocaleString('vi-VN') + ' đ';
+      loadSlotsForTargetTime();
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tabBtnNew').classList.toggle('active', tab === 'new');
+      document.getElementById('tabBtnActive').classList.toggle('active', tab === 'active');
+      document.getElementById('tabBtnHistory').classList.toggle('active', tab === 'history');
+
+      document.getElementById('sectionNew').style.display = tab === 'new' ? 'block' : 'none';
+      document.getElementById('sectionActive').style.display = tab === 'active' ? 'block' : 'none';
+      document.getElementById('sectionHistory').style.display = tab === 'history' ? 'block' : 'none';
+
+      if (tab === 'new') loadSlotsForTargetTime();
+      if (tab === 'active' || tab === 'history') loadMyBookings();
+    }
+
+    function switchCustomer() {
+      const nextUser = (currentUser.username === 'customer01') ? 'customer02' : 'customer01';
+      const pass = (nextUser === 'customer01') ? 'Customer@123' : 'Customer02@123';
+      
+      fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: nextUser, password: pass })
+      })
+      .then(res => res.json())
+      .then(data => {
+        localStorage.setItem('smartParkingToken', data.accessToken);
+        localStorage.setItem('smartParkingUser', JSON.stringify({ username: data.username, role: data.role }));
+        currentToken = data.accessToken;
+        currentUser = { username: data.username, role: data.role };
+        document.getElementById('txtUsername').textContent = nextUser;
+        showToast('Đã chuyển sang tài khoản ' + nextUser);
+        loadMyBookings();
+        loadSlotsForTargetTime();
+      })
+      .catch(e => showToast('Lỗi đổi user: ' + e.message));
+    }
+
+    function logout() {
+      localStorage.removeItem('smartParkingToken');
+      localStorage.removeItem('smartParkingUser');
+      window.location.href = '/index.html';
+    }
+
+    // Tải sơ đồ 40 ô đỗ xe tại thời điểm T
+    async function loadSlotsForTargetTime() {
+      const timeVal = document.getElementById('inputHenT').value;
+      const url = timeVal ? `/api/slots?atTime=${encodeURIComponent(new Date(timeVal).toISOString())}` : '/api/slots';
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Không tải được sơ đồ ô');
+        const slots = await res.json();
+        renderCustomerSlotGrid(slots);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderCustomerSlotGrid(slots) {
+      const container = document.getElementById('customerSlotGrid');
+      container.innerHTML = '';
+
+      const rows = ['A', 'B', 'C', 'D', 'E'];
+      rows.forEach(r => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'grid-row';
+
+        const label = document.createElement('div');
+        label.className = 'row-label';
+        label.innerHTML = r + (r === 'E' ? '<span class="physical-badge">IoT</span>' : '');
+        rowDiv.appendChild(label);
+
+        const slotsDiv = document.createElement('div');
+        slotsDiv.className = 'slots-in-row';
+
+        const slotsInRow = slots.filter(s => s.hang === r).sort((a,b) => a.cot - b.cot);
+        slotsInRow.forEach(s => {
+          const node = document.createElement('div');
+          node.className = 'slot-node';
+          node.id = 'slot-node-' + s.maViTri;
+
+          let statusClass = 'free';
+          let statusText = s.maViTri;
+
+          if (s.trangThai === 'FREE') statusClass = 'free';
+          else if (s.trangThai === 'HELD') statusClass = 'held';
+          else if (s.trangThai === 'BOOKED_FUTURE') statusClass = 'booked-future';
+          else if (s.trangThai === 'GUIDING') statusClass = 'guiding';
+          else statusClass = 'booked';
+
+          node.classList.add(statusClass);
+          if (selectedSlotId === s.maViTri) node.classList.add('selected');
+
+          node.innerHTML = `<span>${s.maViTri}</span>`;
+
+          if (s.trangThai === 'FREE') {
+            node.onclick = () => {
+              selectedSlotId = s.maViTri;
+              document.querySelectorAll('.slot-node').forEach(el => el.classList.remove('selected'));
+              node.classList.add('selected');
+              document.getElementById('txtSelectedSlot').textContent = `Ô ${s.maViTri} (${r === 'E' ? 'Cảm biến thật hàng E' : 'Ô ảo'})`;
+            };
+          } else if (s.trangThai === 'BOOKED_FUTURE') {
+            node.style.cursor = 'not-allowed';
+            node.onclick = () => {
+              showToast(`Ô ${s.maViTri} đã có khách đặt trước trong khung giờ này. Vui lòng chọn ô khác!`);
+            };
+          }
+
+          slotsDiv.appendChild(node);
+        });
+
+        rowDiv.appendChild(slotsDiv);
+        container.appendChild(rowDiv);
+      });
+    }
+
+    // Đặt chỗ
+    async function submitCreateBooking() {
+      if (!selectedSlotId) {
+        showToast('Vui lòng chọn 1 ô đỗ còn trống trên sơ đồ!');
+        return;
+      }
+      const henT = document.getElementById('inputHenT').value;
+      const bienSo = document.getElementById('inputBienSo').value.trim();
+      if (!bienSo) {
+        showToast('Vui lòng nhập biển số xe!');
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitBooking');
+      btn.disabled = true;
+      btn.textContent = 'Đang xử lý giữ chỗ...';
+
+      try {
+        const payload = {
+          thoiGianHenT: new Date(henT).toISOString(),
+          goiThoiLuongGio: selectedDurationHours,
+          loaiKhach: 'DAT_TRUOC',
+          danhSachViTri: [{ maViTri: selectedSlotId, bienSo: bienSo }]
+        };
+
+        const res = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + currentToken
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Lỗi đặt chỗ');
+        }
+
+        const data = await res.json();
+        showToast('Giữ chỗ thành công! Vui lòng thanh toán.');
+        selectedSlotId = null;
+        document.getElementById('txtSelectedSlot').textContent = 'Chưa chọn';
+
+        await loadMyBookings();
+        switchTab('active');
+        displayActiveOrder(data);
+      } catch (err) {
+        showToast('Thất bại: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Giữ chỗ ngay →';
+      }
+    }
+
+    // Tải danh sách đơn của tôi
+    async function loadMyBookings() {
+      try {
+        const res = await fetch('/api/bookings/my-bookings', {
+          headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) return;
+        const list = await res.json();
+
+        // Render lịch sử
+        renderHistoryList(list);
+
+        // Tìm đơn đang active (PENDING_PAYMENT, PAID, ENTERED, PARKED)
+        const activeOrders = list.filter(o => ['PENDING_PAYMENT', 'PAID', 'ENTERED', 'PARKED'].includes(o.trangThai));
+        document.getElementById('activeCount').textContent = activeOrders.length;
+
+        if (activeOrders.length > 0) {
+          currentActiveOrder = activeOrders[0];
+          displayActiveOrder(currentActiveOrder);
+          document.getElementById('emptyActiveTicket').style.display = 'none';
+        } else {
+          currentActiveOrder = null;
+          document.getElementById('cardPayment').style.display = 'none';
+          document.getElementById('cardTicket').style.display = 'none';
+          document.getElementById('timerCard').style.display = 'none';
+          document.getElementById('emptyActiveTicket').style.display = 'block';
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Hiển thị đơn đang active
+    function displayActiveOrder(order) {
+      currentActiveOrder = order;
+      clearInterval(timerInterval);
+
+      const status = order.trangThai;
+      const timerCard = document.getElementById('timerCard');
+      const cardPayment = document.getElementById('cardPayment');
+      const cardTicket = document.getElementById('cardTicket');
+      const emptyBox = document.getElementById('emptyActiveTicket');
+
+      emptyBox.style.display = 'none';
+
+      if (status === 'PENDING_PAYMENT') {
+        // Hiện khung thanh toán
+        cardPayment.style.display = 'block';
+        cardTicket.style.display = 'none';
+        timerCard.style.display = 'block';
+
+        document.getElementById('timerLabel').textContent = 'ĐỒNG HỒ 1: HẠN THANH TOÁN (5 PHÚT)';
+        document.getElementById('timerOrderCode').textContent = '#' + order.maDon;
+        document.getElementById('timerDesc').textContent = 'Vui lòng thanh toán để xác nhận giữ ô trước khi hết hạn.';
+        document.getElementById('jamActionBox').style.display = 'none';
+
+        startCountdown(new Date(order.hanThanhToan));
+
+        // Thông tin chuyển khoản
+        const totalVnd = order.tongTien.toLocaleString('vi-VN') + ' đ';
+        document.getElementById('payAmountBadge').textContent = totalVnd;
+        document.getElementById('bankPayAmount').textContent = totalVnd;
+        document.getElementById('bankTxCode').textContent = order.maGiaoDichDuyNhat || ('ORDER_' + order.maDon);
+        document.getElementById('cashOrderIdText').textContent = '#' + order.maDon;
+
+        // Render VietQR giả
+        renderFakeBankQr(order.tongTien, order.maGiaoDichDuyNhat || ('ORDER_' + order.maDon));
+      } else if (['PAID', 'ENTERED', 'PARKED'].includes(status)) {
+        // Hiện vé đỗ xe
+        cardPayment.style.display = 'none';
+        cardTicket.style.display = 'block';
+        timerCard.style.display = 'block';
+
+        const badge = document.getElementById('ticketStatusBadge');
+        badge.className = 'status-badge status-' + status;
+        badge.textContent = status;
+
+        const entryObj = order.entryCodes && order.entryCodes.length > 0 ? order.entryCodes[0] : null;
+        const entryCode = entryObj ? entryObj.maEntryCode : '---';
+        const plate = entryObj ? entryObj.bienSo : (order.bienSo || '51H-999.88');
+        const slot = order.danhSachViTri && order.danhSachViTri.length > 0 ? order.danhSachViTri.join(', ') : 'E1';
+
+        document.getElementById('txtEntryCode').textContent = entryCode;
+        document.getElementById('ticketPlate').textContent = plate;
+        document.getElementById('ticketSlot').textContent = slot;
+        document.getElementById('ticketTimeT').textContent = formatTime(order.thoiGianHenT);
+        document.getElementById('ticketDuration').textContent = order.goiThoiLuongGio + ' giờ';
+        document.getElementById('ticketEndTime').textContent = formatTime(order.thoiGianKetThucDuKien);
+
+        // Render QR Code EntryCode
+        renderEntryQr(entryCode);
+
+        // Cập nhật trạng thái nút Dẫn đường (Chỉ bật khi xe đã vào cổng ENTERED)
+        const btnGuide = document.getElementById('btnGuide');
+        const guideHint = document.getElementById('guideHintText');
+        if (status === 'PAID') {
+          btnGuide.disabled = true;
+          btnGuide.style.opacity = '0.45';
+          btnGuide.style.cursor = 'not-allowed';
+          btnGuide.style.background = '#64748b';
+          btnGuide.style.boxShadow = 'none';
+          guideHint.textContent = 'ℹ️ Dải LED dẫn đường chỉ kích hoạt sau khi xe đã quét mã qua cổng vào (ENTERED).';
+        } else {
+          btnGuide.disabled = false;
+          btnGuide.style.opacity = '1';
+          btnGuide.style.cursor = 'pointer';
+          btnGuide.style.background = '#0284c7';
+          btnGuide.style.boxShadow = '0 4px 14px rgba(2,132,199,0.3)';
+          guideHint.textContent = '💡 Dải LED NeoPixel sẵn sàng! Bấm để bật đường đèn dẫn từ cổng tới ô đỗ của bạn.';
+        }
+
+        // Đồng hồ đếm ngược theo giai đoạn
+        if (status === 'PAID') {
+          document.getElementById('timerLabel').textContent = 'ĐỒNG HỒ 2: HẠN CHECK-IN (T+15 PHÚT)';
+          document.getElementById('timerDesc').textContent = 'Vui lòng đến cổng bãi xe và quét mã trước hạn này để không bị NO_SHOW.';
+          document.getElementById('jamActionBox').style.display = 'none';
+          startCountdown(new Date(order.hanCheckIn));
+        } else if (status === 'ENTERED') {
+          document.getElementById('timerLabel').textContent = 'ĐỒNG HỒ 3: THỜI GIAN ĐI VÀO Ô (10 PHÚT)';
+          document.getElementById('timerDesc').textContent = 'Xe đã qua cổng! Vui lòng di chuyển vào ô đỗ theo dải đèn chỉ dẫn.';
+          document.getElementById('jamActionBox').style.display = 'block';
+          startCountdown(new Date(order.hanDoVaoO));
+        } else if (status === 'PARKED') {
+          document.getElementById('timerLabel').textContent = 'THỜI GIAN ĐỖ CÒN LẠI';
+          document.getElementById('timerDesc').textContent = 'Xe đang đỗ an toàn trong ô. Chú ý giờ trả ô để tránh phí phạt quá giờ.';
+          document.getElementById('jamActionBox').style.display = 'none';
+          startCountdown(new Date(order.thoiGianKetThucDuKien));
+        }
+      }
+    }
+
+    // Đếm ngược đồng hồ
+    function startCountdown(targetDate) {
+      clearInterval(timerInterval);
+      hasAlerted2Min = false;
+      updateTimer();
+      timerInterval = setInterval(updateTimer, 1000);
+
+      function updateTimer() {
+        const now = new Date();
+        const diff = targetDate - now;
+        const el = document.getElementById('timerCount');
+
+        if (diff <= 0) {
+          el.textContent = '00:00';
+          el.style.color = '#ef4444';
+          clearInterval(timerInterval);
+          return;
+        }
+
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        el.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        el.style.color = mins < 2 ? '#ef4444' : '#38bdf8';
+
+        // Cảnh báo toast khi còn dưới 2 phút
+        if (mins < 2 && !hasAlerted2Min) {
+          hasAlerted2Min = true;
+          showToast('⚠️ Cảnh báo: Bạn chỉ còn dưới 2 phút trước khi hết hạn!');
+        }
+      }
+    }
+
+    function switchPayTab(method) {
+      document.getElementById('payTabBank').classList.toggle('active', method === 'bank');
+      document.getElementById('payTabCash').classList.toggle('active', method === 'cash');
+      document.getElementById('payContentBank').style.display = method === 'bank' ? 'block' : 'none';
+      document.getElementById('payContentCash').style.display = method === 'cash' ? 'block' : 'none';
+    }
+
+    // Mô phỏng chuyển khoản thành công
+    async function simulateBankTransfer() {
+      if (!currentActiveOrder) return;
+      try {
+        const res = await fetch(`/api/demo/payment/${currentActiveOrder.maDon}/simulate-success`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Lỗi thanh toán demo');
+        }
+        showToast('Thanh toán thành công! Vé đỗ xe đã sẵn sàng.');
+        await loadMyBookings();
+      } catch (e) {
+        showToast('Lỗi: ' + e.message);
+      }
+    }
+
+    // Quy đổi mã CashCode tiền mặt
+    async function redeemCashCode() {
+      if (!currentActiveOrder) return;
+      const code = document.getElementById('inputCashCode').value.trim().toUpperCase();
+      const cleanCode = code.startsWith('CASH-') ? code.substring(5) : code;
+      if (!cleanCode || cleanCode.length !== 6) {
+        showToast('Mã CashCode phải gồm 6 ký tự Crockford!');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/payment/cash/redeem', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + currentToken
+          },
+          body: JSON.stringify({
+            maDon: currentActiveOrder.maDon,
+            cashCode: code
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Quy đổi CashCode thất bại');
+        }
+
+        showToast('Kích hoạt vé đỗ xe bằng tiền mặt thành công!');
+        await loadMyBookings();
+      } catch (e) {
+        showToast('Lỗi: ' + e.message);
+      }
+    }
+
+    // Hủy đơn đang giữ chỗ
+    async function cancelCurrentBooking() {
+      if (!currentActiveOrder) return;
+      if (!confirm('Bạn có chắc chắn muốn hủy đơn giữ chỗ này?')) return;
+
+      try {
+        const res = await fetch(`/api/bookings/${currentActiveOrder.maDon}/cancel`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Lỗi hủy đơn');
+        }
+        showToast('Đã hủy đơn giữ chỗ thành công.');
+        await loadMyBookings();
+        switchTab('new');
+      } catch (e) {
+        showToast('Lỗi: ' + e.message);
+      }
+    }
+
+    // Báo kẹt xe
+    async function reportTrafficJam() {
+      if (!currentActiveOrder) return;
+      try {
+        const res = await fetch(`/api/bookings/${currentActiveOrder.maDon}/report-traffic-jam`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Không thể gia hạn');
+        }
+        showToast('Đã gia hạn thêm 5 phút tìm ô thành công!');
+        await loadMyBookings();
+      } catch (e) {
+        showToast('Lỗi: ' + e.message);
+      }
+    }
+
+    // Dẫn đường vào ô
+    async function triggerRouteGuidance() {
+      if (!currentActiveOrder) return;
+      const slot = currentActiveOrder.danhSachViTri && currentActiveOrder.danhSachViTri[0];
+      if (!slot) return;
+
+      try {
+        const res = await fetch(`/api/gate/guide-path/${slot}`, {
+          headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) throw new Error('Không thể lấy đường đi');
+        const guideData = await res.json();
+
+        showToast(`Đã bật dải đèn LED dẫn đường tới ô ${slot}!`);
+        renderGuideMiniMap(slot, guideData.path || []);
+      } catch (e) {
+        showToast('Lỗi: ' + e.message);
+      }
+    }
+
+    function renderGuideMiniMap(targetSlot, pathPixels) {
+      const box = document.getElementById('guideRouteMapBox');
+      const miniMap = document.getElementById('guideMiniMap');
+      document.getElementById('guideSlotText').textContent = targetSlot;
+      box.style.display = 'block';
+
+      miniMap.innerHTML = `
+        <div style="color: #38bdf8; font-size: 0.8rem; margin-bottom: 8px;">
+          Đoạn LED kích hoạt: <strong>[${pathPixels.join(', ')}]</strong> | Màu: <span style="color:#00e5ff;">Xanh Cyan NeoPixel</span>
+        </div>
+        <div style="display:flex; align-items:center; gap: 8px; overflow-x: auto; padding: 10px 0;">
+          <div style="background:#1e293b; color:#fff; padding:6px 10px; border-radius:6px; font-size:0.75rem;">CỔNG VÀO</div>
+          <span style="color:#00e5ff; font-weight:900;">➔</span>
+          <div style="background:#1e293b; color:#00e5ff; padding:6px 10px; border-radius:6px; font-size:0.75rem; border:1px solid #00e5ff;">TRẠM CP1</div>
+          <span style="color:#00e5ff; font-weight:900;">➔</span>
+          <div style="background:#00e5ff; color:#000; padding:8px 14px; border-radius:8px; font-size:0.85rem; font-weight:800; box-shadow:0 0 10px #00e5ff;">
+            Ô ĐỖ ${targetSlot}
+          </div>
+        </div>
+      `;
+
+      // Highlight ô trên sơ đồ lớn
+      document.querySelectorAll('.slot-node').forEach(el => el.classList.remove('path-glow'));
+      const targetNode = document.getElementById('slot-node-' + targetSlot);
+      if (targetNode) targetNode.classList.add('path-glow');
+    }
+
+    // Render danh sách lịch sử
+    function renderHistoryList(list) {
+      const container = document.getElementById('historyBookingList');
+      if (!list || list.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 20px;">Chưa có đơn hàng nào.</p>';
+        return;
+      }
+
+      container.innerHTML = list.map(item => `
+        <div class="booking-item-card" onclick="viewHistoryItem(${item.maDon})">
+          <div class="booking-item-header">
+            <strong>Đơn #${item.maDon}</strong>
+            <span class="status-badge status-${item.trangThai}">${getVietnameseStatus(item.trangThai)}</span>
+          </div>
+          <div style="font-size: 0.82rem; color: #475569; display: flex; justify-content: space-between;">
+            <span>Ô: <strong>${item.danhSachViTri.join(', ') || 'Chưa gán'}</strong></span>
+            <span>${item.tongTien.toLocaleString('vi-VN')} đ</span>
+          </div>
+          <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">
+            Hẹn: ${formatTime(item.thoiGianHenT)} (${item.goiThoiLuongGio}h)
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function viewHistoryItem(maDon) {
+      fetch(`/api/bookings/${maDon}`, {
+        headers: { 'Authorization': 'Bearer ' + currentToken }
+      })
+      .then(res => res.json())
+      .then(order => {
+        switchTab('active');
+        displayActiveOrder(order);
+      });
+    }
+
+    function renderEntryQr(text) {
+      const el = document.getElementById('qrcodeCanvas');
+      el.innerHTML = '';
+      if (!text || text === '---') return;
+      new QRCode(el, {
+        text: text,
+        width: 150,
+        height: 150,
+        colorDark: '#0f172a',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    function renderFakeBankQr(amount, content) {
+      const el = document.getElementById('bankQrCanvas');
+      el.innerHTML = '';
+      const qrPayload = `VIETQR|VCB|9999888866|${amount}|${content}`;
+      new QRCode(el, {
+        text: qrPayload,
+        width: 140,
+        height: 140,
+        colorDark: '#1769e0',
+        colorLight: '#ffffff'
+      });
+    }
+
+    function formatTime(isoStr) {
+      if (!isoStr) return '--:--';
+      const d = new Date(isoStr);
+      return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} ${d.getDate()}/${d.getMonth()+1}`;
+    }
+
+    function updateSignalRBadge(state) {
+      const el = document.getElementById('customerSignalRBadge');
+      if (!el) return;
+      el.className = 'signalr-badge ' + state;
+      if (state === 'connected') {
+        el.innerHTML = '<span class="signalr-dot"></span> Đã kết nối';
+      } else if (state === 'reconnecting') {
+        el.innerHTML = '<span class="signalr-dot"></span> Đang nối lại...';
+      } else {
+        el.innerHTML = '<span class="signalr-dot"></span> Mất kết nối';
+      }
+    }
+
+    // Kết nối SignalR với tự động kết nối lại
+    function initSignalR() {
+      signalrConnection = new signalR.HubConnectionBuilder()
+        .withUrl('/hub/parking')
+        .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+        .build();
+
+      signalrConnection.onreconnecting((error) => {
+        console.warn("SignalR đang kết nối lại...", error);
+        updateSignalRBadge('reconnecting');
+      });
+
+      signalrConnection.onreconnected((connectionId) => {
+        console.log("SignalR đã kết nối lại:", connectionId);
+        updateSignalRBadge('connected');
+        // Tự động tải lại sơ đồ ô và vé của tôi từ API
+        loadSlotsForTargetTime();
+        loadMyBookings();
+      });
+
+      signalrConnection.onclose((error) => {
+        console.error("SignalR mất kết nối:", error);
+        updateSignalRBadge('disconnected');
+      });
+
+      signalrConnection.on('BookingStatusChanged', (orderId, newStatus) => {
+        showToast(`🔔 Đơn hàng #${orderId} chuyển sang: ${getVietnameseStatus(newStatus)}`);
+        loadMyBookings();
+        loadSlotsForTargetTime();
+      });
+
+      signalrConnection.on('OrderStatusUpdated', (data) => {
+        const st = data.status || data.trangThai || 'CẬP NHẬT';
+        showToast(`🔔 Đơn hàng #${data.orderId || data.maDon} chuyển sang: ${getVietnameseStatus(st)}`);
+        loadMyBookings();
+        loadSlotsForTargetTime();
+      });
+
+      signalrConnection.on('SlotStatusChanged', () => {
+        loadSlotsForTargetTime();
+      });
+
+      signalrConnection.on('SlotsReloadRequired', () => {
+        loadSlotsForTargetTime();
+      });
+
+      signalrConnection.start()
+        .then(() => updateSignalRBadge('connected'))
+        .catch(err => {
+          console.error('SignalR Err:', err);
+          updateSignalRBadge('disconnected');
+        });
+    }
+  </script>
+</body>
+</html>

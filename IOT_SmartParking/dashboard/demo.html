@@ -1,0 +1,1035 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bảng Điều Khiển DEMO | Smart Parking IoT</title>
+  <link rel="stylesheet" href="style.css?v=20261121-1">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+  <style>
+    :root {
+      --color-free: #10b981;
+      --color-held: #f59e0b;
+      --color-booked: #3b82f6;
+      --color-booked-future: #06b6d4;
+      --color-guiding: #14b8a6;
+      --color-occupied: #ef4444;
+      --color-overlap: #eab308;
+      --color-unknown: #64748b;
+      --color-maintenance: #f97316;
+    }
+    .demo-shell {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .demo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .demo-header h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-reset-demo {
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-reset-demo:hover {
+      background: #b91c1c;
+      transform: scale(1.02);
+    }
+
+    /* GRID & LAYOUT */
+    .dashboard-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 1024px) {
+      .dashboard-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .card-title {
+      margin-top: 0;
+      margin-bottom: 14px;
+      font-size: 1.1rem;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* TIME TRAVEL BAR */
+    .time-travel-bar {
+      background: #0f172a;
+      color: white;
+      padding: 16px 20px;
+      border-radius: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .time-display {
+      font-family: monospace;
+      font-size: 1.25rem;
+      color: #38bdf8;
+      font-weight: 700;
+    }
+    .btn-time {
+      background: #334155;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-time:hover {
+      background: #0284c7;
+      color: white;
+      border-color: #0284c7;
+    }
+    .btn-time-reset {
+      background: #7f1d1d;
+      border-color: #991b1b;
+      color: #fecaca;
+    }
+    .btn-time-reset:hover {
+      background: #dc2626;
+      color: white;
+    }
+
+    /* SƠ ĐỒ 40 Ô */
+    .row-wrapper {
+      display: grid;
+      grid-template-columns: 75px repeat(8, 1fr);
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+    .row-label {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #334155;
+      text-align: center;
+      padding: 6px;
+      background: #f1f5f9;
+      border-radius: 6px;
+    }
+    .row-label.real-row {
+      background: #dbeafe;
+      color: #1d4ed8;
+      border: 1px dashed #3b82f6;
+    }
+    .slot-cell {
+      aspect-ratio: 1.25;
+      border-radius: 8px;
+      padding: 6px 4px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      color: white;
+      font-weight: 700;
+      transition: all 0.15s ease;
+      position: relative;
+      user-select: none;
+    }
+    .slot-cell:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    .slot-cell.active-select {
+      outline: 4px solid #0f172a;
+      outline-offset: 2px;
+      transform: scale(1.04);
+      z-index: 2;
+    }
+    .slot-id { font-size: 0.95rem; }
+    .slot-status { font-size: 0.65rem; text-transform: uppercase; }
+    .slot-sub { font-size: 0.68rem; opacity: 0.9; font-weight: 500; }
+
+    .status-FREE { background: var(--color-free); }
+    .status-HELD { background: var(--color-held); }
+    .status-BOOKED { background: var(--color-booked); }
+    .status-BOOKED_FUTURE { background: var(--color-booked-future); }
+    .status-GUIDING { background: var(--color-guiding); animation: pulse 1.5s infinite; }
+    .status-OCCUPIED { background: var(--color-occupied); }
+    .status-OVERLAP { background: var(--color-overlap); color: #0f172a; border: 2px dashed #b91c1c; }
+    .status-UNKNOWN { background: var(--color-unknown); }
+    .status-MAINTENANCE { background: var(--color-maintenance); }
+
+    /* ACTION BUTTONS */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .btn-control {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      border: 1px solid #cbd5e1;
+      background: white;
+      color: #334155;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn-control:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+    .btn-control.primary {
+      background: #1769e0;
+      color: white;
+      border-color: #1769e0;
+    }
+    .btn-control.primary:hover { background: #1554be; }
+    .btn-control.danger {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #fecaca;
+    }
+    .btn-control.danger:hover { background: #fca5a5; }
+
+    /* LIVE LOGS */
+    .log-box {
+      height: 380px;
+      overflow-y: auto;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 12px;
+      border-radius: 10px;
+      font-family: monospace;
+      font-size: 0.82rem;
+    }
+    .log-item {
+      margin-bottom: 6px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #1e293b;
+      line-height: 1.4;
+    }
+    .log-time { color: #94a3b8; }
+    .log-source { color: #38bdf8; font-weight: 700; }
+    .log-level-INFO { color: #4ade80; }
+    .log-level-WARNING { color: #facc15; }
+    .log-level-ERROR { color: #f87171; }
+
+    /* TOAST */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast-msg {
+      background: #1e293b;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+      font-size: 0.9rem;
+      border-left: 5px solid #3b82f6;
+      animation: slideIn 0.2s ease;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* SIGNALR BADGE */
+    .signalr-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .signalr-badge.connected {
+      background: #064e3b;
+      color: #34d399;
+      border: 1px solid #059669;
+    }
+    .signalr-badge.reconnecting {
+      background: #78350f;
+      color: #fde047;
+      border: 1px solid #d97706;
+    }
+    .signalr-badge.disconnected {
+      background: #7f1d1d;
+      color: #f87171;
+      border: 1px solid #dc2626;
+    }
+    .signalr-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+  </style>
+</head>
+<body style="background: #f8fafc;">
+  <div class="demo-shell">
+    <!-- Header -->
+    <header class="demo-header">
+      <div>
+        <h1>🎛️ Bảng Điều Khiển DEMO Toàn Diện</h1>
+        <small style="color: #94a3b8;">Dành cho kiểm thử viên & giảng viên - Thao tác trực tiếp các kịch bản bất thường</small>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <div id="demoSignalRBadge" class="signalr-badge connected"><span class="signalr-dot"></span> Đã kết nối</div>
+        <a href="admin.html" style="color: #93c5fd; text-decoration: none; font-size: 0.9rem; font-weight: 600;">← Xem Admin</a>
+        <a href="index.html" style="color: #cbd5e1; text-decoration: none; font-size: 0.9rem; margin-right: 8px;">Trang chủ</a>
+        <button class="btn-reset-demo" onclick="resetDemo()">
+          <span>🔄</span> Đặt Lại Dữ Liệu Demo
+        </button>
+      </div>
+    </header>
+
+    <!-- Banner DemoMode Alert (Ẩn nếu bật) -->
+    <div id="demoModeWarning" style="display:none;background:#fef2f2;border:1px solid #fee2e2;color:#991b1b;padding:14px;border-radius:10px;margin-bottom:20px;font-weight:600;">
+      ⚠️ Cảnh báo: DemoMode đang TẮT trong backend (appsettings). Các chức năng mô phỏng bên dưới sẽ không hoạt động.
+    </div>
+
+    <!-- Thanh Tua Thời Gian (Time Travel) -->
+    <div class="time-travel-bar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:1.2rem;">⏱️</span>
+        <div>
+          <div style="font-size:0.75rem;color:#94a3b8;text-transform:uppercase;">Thời gian hệ thống (UTC+7)</div>
+          <div id="simClockDisplay" class="time-display">--:--:-- --/--/----</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <span style="font-size:0.85rem;color:#cbd5e1;">Tua thời gian:</span>
+        <button class="btn-time" onclick="advanceTime(5)">+5 phút</button>
+        <button class="btn-time" onclick="advanceTime(15)">+15 phút</button>
+        <button class="btn-time" onclick="advanceTime(30)">+30 phút</button>
+        <button class="btn-time" onclick="advanceTime(60)">+60 phút</button>
+        <button class="btn-time btn-time-reset" onclick="resetTime()">Đặt lại giờ thật</button>
+      </div>
+    </div>
+
+    <div class="dashboard-layout">
+      <!-- CỘT TRÁI: Sơ Đồ 40 Ô & Điều Khiển Ô -->
+      <div>
+        <!-- Sơ đồ 40 ô -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 class="card-title" style="margin:0;">🅿️ Sơ Đồ 40 Ô Đỗ Xe (Click vào ô để chọn)</h3>
+            <span id="selectedSlotBadge" style="font-size:0.85rem;padding:4px 10px;border-radius:6px;background:#e0f2fe;color:#0369a1;font-weight:700;">Chưa chọn ô</span>
+          </div>
+
+          <!-- Grid 40 ô -->
+          <div id="demoGridContainer" style="margin-bottom:16px;"></div>
+
+          <!-- Bảng thao tác cho ô được chọn -->
+          <div style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;padding:16px;">
+            <div style="font-weight:700;font-size:0.92rem;color:#1e293b;margin-bottom:10px;">
+              Thao tác trên ô đang chọn: <span id="currentSelectedSlotLabel" style="color:#2563eb;">(Hãy bấm chọn 1 ô trên sơ đồ)</span>
+            </div>
+            <div class="action-grid">
+              <button class="btn-control primary" onclick="setSlotState('PARK', 30)">🚗 Đặt xe vào ô (Khoảng cách 30 cm)</button>
+              <button class="btn-control" style="background:#fef3c7;border-color:#fde68a;color:#92400e;" onclick="setSlotState('OVERLAP', 60)">⚠️ Đặt xe đỗ lấn (Khoảng cách 60 cm)</button>
+              <button class="btn-control" onclick="setSlotState('LEAVE', 150)">🚙 Bỏ xe ra khỏi ô (Trả về FREE)</button>
+              <button class="btn-control danger" onclick="setSlotState('MAINTENANCE', 0)">🔧 Đặt BẢO TRÌ (MAINTENANCE)</button>
+            </div>
+            <div style="margin-top:8px;font-size:0.78rem;color:#64748b;">
+              * Lưu ý: Ô hàng E là cảm biến thật (xử lý cự ly HC-SR04; nếu 2 ô liền kề cùng đỗ lấn $\le 80$cm sẽ kích hoạt OVERLAP). Hàng A-D là ô ảo.
+            </div>
+          </div>
+        </div>
+
+        <!-- Cổng và Hành Trình Xe -->
+        <div class="card">
+          <h3 class="card-title">🚧 Mô Phỏng Cổng Barie & Hành Trình Xe</h3>
+          <div class="action-grid" style="grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;">
+            <button class="btn-control" onclick="simulateGatePass('IN')">🟢 Xe qua cổng vào (PASS)</button>
+            <button class="btn-control" onclick="simulateGatePass('OUT')">🔴 Xe qua cổng ra (LEAVE)</button>
+            <button class="btn-control" onclick="simulateCheckpoint('CP1')">📍 Xe qua Trạm CP1 (+5p)</button>
+            <button class="btn-control" onclick="simulateCheckpoint('CP2')">📍 Xe qua Trạm CP2 (+5p)</button>
+          </div>
+        </div>
+
+        <!-- Cắt / Cấp Điện Từng Board Thiết Bị (LWT Audit) -->
+        <div class="card">
+          <h3 class="card-title">⚡ Mô Phỏng Mất Điện / Đứt Mạng Phân Tán (MQTT LWT)</h3>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:0.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Chọn Board Thiết Bị:</label>
+            <select id="selPowerBoard" style="width:100%;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.9rem;background:#fff;">
+              <option value="esp32_row_e" selected>esp32_row_e (Hàng E - 8 ô E1-E8)</option>
+              <option value="esp32_row_a">esp32_row_a (Hàng A - 8 ô A1-A8)</option>
+              <option value="esp32_row_b">esp32_row_b (Hàng B - 8 ô B1-B8)</option>
+              <option value="esp32_row_c">esp32_row_c (Hàng C - 8 ô C1-C8)</option>
+              <option value="esp32_row_d">esp32_row_d (Hàng D - 8 ô D1-D8)</option>
+              <option value="esp32_gate">esp32_gate (Board Cổng vào/ra & LCD)</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:12px;margin-bottom:10px;">
+            <button class="btn-control danger" style="flex:1;" onclick="togglePower('OFFLINE')">🔌 Cắt điện board đã chọn (LWT -> UNKNOWN)</button>
+            <button class="btn-control primary" style="flex:1;" onclick="togglePower('ONLINE')">🔋 Có điện lại (ONLINE -> Resync & Audit)</button>
+          </div>
+          <div style="margin-top:6px;">
+            <button class="btn-control" style="width:100%;background:#0284c7;color:#fff;font-weight:700;" onclick="resyncAllBoards()">🔄 Đồng Bộ Lại (Gửi Resync Cho Tất Cả Board & Tải Lại Sơ Đồ)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CỘT PHẢI: Mô Phỏng Quét Cổng & Live Logs -->
+      <div>
+        <!-- Mô phỏng Quét Cổng (Check-in / Check-out) -->
+        <div class="card">
+          <h3 class="card-title">📷 Mô Phỏng Quét Cổng (Mock ALPR & Barcode)</h3>
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Mã vào cổng (EntryCode):</label>
+            <input type="text" id="scanEntryCode" placeholder="Nhập mã vào cổng (ví dụ: ENTRY...)" style="width:100%;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.9rem;">
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="font-size:0.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Biển số xe nhận diện (Mock ALPR):</label>
+            <input type="text" id="scanPlate" placeholder="51A-123.45" style="width:100%;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.9rem;">
+          </div>
+          <div style="display:flex;gap:10px;margin-bottom:12px;">
+            <button class="btn-control primary" style="flex:1;" onclick="scanGate('IN')">Quét Cổng VÀO</button>
+            <button class="btn-control" style="flex:1;" onclick="scanGate('OUT')">Quét Cổng RA</button>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-control" style="font-size:0.75rem;padding:6px 10px;flex:1;" onclick="fillScanMock(true)">Điền mã mẫu hợp lệ</button>
+            <button class="btn-control" style="font-size:0.75rem;padding:6px 10px;flex:1;" onclick="fillScanMock(false)">Điền biển số SAI</button>
+          </div>
+        </div>
+
+        <!-- Nhật ký sự kiện trực tiếp SignalR -->
+        <div class="card" style="margin-bottom:0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 class="card-title" style="margin:0;">📜 Nhật Ký Sự Kiện Realtime</h3>
+            <button class="btn-control danger" style="padding:4px 10px;font-size:0.78rem;" onclick="clearLogs()">Xóa</button>
+          </div>
+          <div id="liveLogsContainer" class="log-box">
+            <div style="color:#64748b;text-align:center;padding:20px;">Đang lắng nghe sự kiện từ SignalR...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BƯỚC 3: 12 KỊCH BẢN KIỂM THỬ TỰ ĐỘNG (KẾT QUẢ MONG ĐỢI VS THỰC TẾ) -->
+    <div class="card" style="margin-top:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h2 style="margin:0 0 4px 0;font-size:1.35rem;color:#0f172a;">🧪 12 Kịch Bản Kiểm Thử Nghiệp Vụ Tự Động (Bước 3)</h2>
+          <small style="color:#64748b;">Mỗi kịch bản so sánh trực tiếp "Kết quả mong đợi" và "Kết quả thực tế" có đánh giá ĐẠT (xanh) / CHƯA ĐẠT (đỏ).</small>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn-control primary" style="padding:10px 18px;font-weight:700;background:#10b981;border-color:#059669;" onclick="runAllScenarios()">
+            ⚡ Chạy tất cả 12 kịch bản liên tiếp
+          </button>
+        </div>
+      </div>
+
+      <div id="scenariosGrid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(440px, 1fr));gap:16px;">
+        <!-- Render 12 cards dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script>
+    let selectedSlotId = null;
+    let slots = [];
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const div = document.createElement('div');
+      div.className = 'toast-msg';
+      if (type === 'error') div.style.borderLeftColor = '#ef4444';
+      else if (type === 'warning') div.style.borderLeftColor = '#f59e0b';
+      else if (type === 'success') div.style.borderLeftColor = '#10b981';
+      div.textContent = msg;
+      container.appendChild(div);
+      setTimeout(() => {
+        div.style.opacity = '0';
+        setTimeout(() => div.remove(), 300);
+      }, 4000);
+    }
+
+    // SignalR Setup với tự động kết nối lại
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl("/hub/parking")
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+      .build();
+
+    function updateSignalRBadge(state) {
+      const el = document.getElementById('demoSignalRBadge');
+      if (!el) return;
+      el.className = 'signalr-badge ' + state;
+      if (state === 'connected') {
+        el.innerHTML = '<span class="signalr-dot"></span> Đã kết nối';
+      } else if (state === 'reconnecting') {
+        el.innerHTML = '<span class="signalr-dot"></span> Đang nối lại...';
+      } else {
+        el.innerHTML = '<span class="signalr-dot"></span> Mất kết nối';
+      }
+    }
+
+    connection.onreconnecting((error) => {
+      console.warn("SignalR đang kết nối lại...", error);
+      updateSignalRBadge('reconnecting');
+    });
+
+    connection.onreconnected(async (connectionId) => {
+      console.log("SignalR đã kết nối lại:", connectionId);
+      updateSignalRBadge('connected');
+      // Khi nối lại: Tự động tải lại sơ đồ ô từ API
+      await loadSlots();
+    });
+
+    connection.onclose((error) => {
+      console.error("SignalR mất kết nối:", error);
+      updateSignalRBadge('disconnected');
+    });
+
+    connection.on("SlotUpdated", (slot) => {
+      loadSlots();
+    });
+
+    connection.on("SlotsReload", () => {
+      loadSlots();
+    });
+
+    connection.on("TimeUpdated", (dto) => {
+      document.getElementById('simClockDisplay').textContent = dto.display;
+    });
+
+    connection.on("SystemLog", (log) => {
+      appendLiveLog(log);
+    });
+
+    connection.on("Alert", (alert) => {
+      showToast(`⚠️ ${alert.alertType}: ${alert.message}`, 'warning');
+    });
+
+    async function startSignalR() {
+      try {
+        await connection.start();
+        updateSignalRBadge('connected');
+      } catch (err) {
+        updateSignalRBadge('disconnected');
+        setTimeout(startSignalR, 4000);
+      }
+    }
+
+    // Gửi lệnh đồng bộ lại cho tất cả các board và tải lại sơ đồ ô
+    async function resyncAllBoards() {
+      try {
+        showToast("Đang gửi yêu cầu đồng bộ lại tới tất cả các board...", "info");
+        const res = await fetch('/api/demo/resync-all', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message || "Đã đồng bộ lại thành công!", "success");
+          await loadSlots();
+        } else {
+          showToast(data.message || "Lỗi đồng bộ lại!", "warning");
+        }
+      } catch (err) {
+        showToast("Lỗi kết nối khi đồng bộ lại: " + err.message, "error");
+      }
+    }
+
+    // Kiểm tra trạng thái DemoMode & Giờ ban đầu
+    async function checkDemoStatus() {
+      try {
+        const res = await fetch('/api/demo/status');
+        if (!res.ok) {
+          document.getElementById('demoModeWarning').style.display = 'block';
+          return;
+        }
+        const data = await res.json();
+        if (!data.demoMode) {
+          document.getElementById('demoModeWarning').style.display = 'block';
+        }
+        document.getElementById('simClockDisplay').textContent = data.displayTime;
+      } catch (e) {
+        document.getElementById('demoModeWarning').style.display = 'block';
+      }
+    }
+
+    // Tải sơ đồ 40 ô
+    async function loadSlots() {
+      try {
+        const res = await fetch('/api/slots');
+        if (!res.ok) return;
+        slots = await res.json();
+        renderGrid(slots);
+      } catch (e) {
+        console.error("Lỗi tải sơ đồ:", e);
+      }
+    }
+
+    function renderGrid(slotsList) {
+      const container = document.getElementById('demoGridContainer');
+      container.innerHTML = '';
+
+      const rows = ['A', 'B', 'C', 'D', 'E'];
+      rows.forEach(r => {
+        const rowWrapper = document.createElement('div');
+        rowWrapper.className = 'row-wrapper';
+
+        const label = document.createElement('div');
+        label.className = 'row-label' + (r === 'E' ? ' real-row' : '');
+        label.innerHTML = `<strong>Hàng ${r}</strong><div style="font-size:0.62rem;">${r === 'E' ? 'Cảm biến thật' : 'Ô ảo'}</div>`;
+        rowWrapper.appendChild(label);
+
+        for (let c = 1; c <= 8; c++) {
+          const slotId = `${r}${c}`;
+          const s = slotsList.find(x => x.maViTri === slotId) || {
+            maViTri: slotId,
+            trangThai: 'FREE',
+            khoangCachCm: 150
+          };
+
+          const cell = document.createElement('div');
+          cell.className = `slot-cell status-${s.trangThai}` + (selectedSlotId === s.maViTri ? ' active-select' : '');
+          cell.onclick = () => selectSlot(s.maViTri);
+
+          cell.innerHTML = `
+            <div class="slot-id">${s.maViTri}</div>
+            <div class="slot-status">${s.trangThai}</div>
+            <div class="slot-sub">${r === 'E' ? `${s.khoangCachCm ?? 150}cm` : (s.bienSo || '---')}</div>
+          `;
+          rowWrapper.appendChild(cell);
+        }
+
+        container.appendChild(rowWrapper);
+      });
+    }
+
+    function selectSlot(slotId) {
+      selectedSlotId = slotId;
+      document.getElementById('selectedSlotBadge').textContent = `Đã chọn: ${slotId}`;
+      document.getElementById('currentSelectedSlotLabel').textContent = slotId;
+      renderGrid(slots);
+    }
+
+    // Thao tác đổi trạng thái ô
+    async function setSlotState(action, distanceCm) {
+      if (!selectedSlotId) {
+        alert("Vui lòng bấm chọn một ô trên sơ đồ trước!");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/demo/slot/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slotId: selectedSlotId,
+            action: action,
+            distanceCm: distanceCm
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Đã đổi ô ${selectedSlotId} sang ${data.newStatus}`, 'success');
+          loadSlots();
+        } else {
+          showToast(data.message || 'Lỗi thao tác ô', 'error');
+        }
+      } catch (e) {
+        showToast('Lỗi kết nối: ' + e.message, 'error');
+      }
+    }
+
+    // Tua thời gian
+    async function advanceTime(minutes) {
+      try {
+        const res = await fetch('/api/demo/time/advance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ minutes })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('simClockDisplay').textContent = data.displayTime;
+          showToast(`Đã tua nhanh +${minutes} phút! Worker đã quét hết hạn.`, 'success');
+          loadSlots();
+        }
+      } catch (e) {
+        showToast('Lỗi tua thời gian', 'error');
+      }
+    }
+
+    async function resetTime() {
+      try {
+        const res = await fetch('/api/demo/time/reset', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('simClockDisplay').textContent = data.displayTime;
+          showToast('Đã đặt lại đồng hồ về thời gian thực tế', 'success');
+          loadSlots();
+        }
+      } catch (e) {
+        showToast('Lỗi reset thời gian', 'error');
+      }
+    }
+
+    // Đặt lại dữ liệu demo
+    async function resetDemo() {
+      if (!confirm("Bạn có chắc chắn muốn xóa toàn bộ đơn và đưa 40 ô về FREE?")) return;
+
+      try {
+        const res = await fetch('/api/demo/reset', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          selectedSlotId = null;
+          document.getElementById('selectedSlotBadge').textContent = 'Chưa chọn ô';
+          document.getElementById('currentSelectedSlotLabel').textContent = '(Hãy bấm chọn 1 ô trên sơ đồ)';
+          showToast('Đã đặt lại toàn bộ dữ liệu demo về trạng thái ban đầu!', 'success');
+          loadSlots();
+          checkDemoStatus();
+        } else {
+          showToast(data.message || 'Lỗi reset demo', 'error');
+        }
+      } catch (e) {
+        showToast('Lỗi reset: ' + e.message, 'error');
+      }
+    }
+
+    // Mô phỏng nguồn điện LWT từng board
+    async function togglePower(state) {
+      const deviceId = document.getElementById('selPowerBoard')?.value || 'esp32_row_e';
+      try {
+        const res = await fetch('/api/demo/power', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceId, state })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(data.message, state === 'OFFLINE' ? 'warning' : 'success');
+          loadSlots();
+        }
+      } catch (e) {
+        showToast('Lỗi thao tác nguồn điện', 'error');
+      }
+    }
+
+    // Mô phỏng xe qua cổng
+    async function simulateGatePass(gate) {
+      try {
+        const res = await fetch('/api/demo/gate/pass', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gate, orderId: 0 })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Xe qua cổng ${gate} thành công cho đơn #${data.orderId}`, 'success');
+          loadSlots();
+        } else {
+          showToast(data.message || 'Không tìm thấy đơn phù hợp để qua cổng', 'error');
+        }
+      } catch (e) {
+        showToast('Lỗi qua cổng: ' + e.message, 'error');
+      }
+    }
+
+    // Mô phỏng trạm kiểm soát
+    async function simulateCheckpoint(cpId) {
+      try {
+        const res = await fetch('/api/demo/checkpoint/pass', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ checkpointId: cpId })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Đã kích hoạt xe qua trạm ${cpId} -> Gia hạn thêm 5 phút!`, 'success');
+        }
+      } catch (e) {
+        showToast('Lỗi trạm kiểm soát', 'error');
+      }
+    }
+
+    // Quét cổng vào / ra
+    async function scanGate(gate) {
+      const code = document.getElementById('scanEntryCode').value.trim();
+      const plate = document.getElementById('scanPlate').value.trim();
+
+      if (!code && gate === 'IN') {
+        alert("Vui lòng nhập EntryCode để quét vào cổng!");
+        return;
+      }
+
+      try {
+        let endpoint = gate === 'IN' ? '/api/demo/gate/scan-in' : '/api/demo/gate/scan-out';
+        let body = gate === 'IN' ? { entryCode: code, bienSo: plate } : { bienSo: plate };
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Quét cổng ${gate} THÀNH CÔNG: ${data.message}`, 'success');
+        } else {
+          showToast(`Quét cổng ${gate} THẤT BẠI: ${data.message}`, 'error');
+        }
+      } catch (e) {
+        showToast('Lỗi quét cổng: ' + e.message, 'error');
+      }
+    }
+
+    // Điền mã mẫu
+    async function fillScanMock(valid) {
+      try {
+        const res = await fetch('/api/bookings/admin/all');
+        const list = await res.json();
+        const active = list.find(b => b.entryCode);
+        if (active) {
+          document.getElementById('scanEntryCode').value = active.entryCode;
+          document.getElementById('scanPlate').value = valid ? (active.bienSos[0] || '51A-123.45') : '51A-999.99';
+          showToast('Đã điền thông tin từ đơn #' + active.maDon, 'info');
+        } else {
+          document.getElementById('scanEntryCode').value = 'ENTRY_DEMO_01';
+          document.getElementById('scanPlate').value = valid ? '51A-123.45' : '51A-999.99';
+          showToast('Đã điền mã mẫu demo.', 'info');
+        }
+      } catch (e) {
+        document.getElementById('scanEntryCode').value = 'ENTRY_DEMO_01';
+        document.getElementById('scanPlate').value = valid ? '51A-123.45' : '51A-999.99';
+      }
+    }
+
+    // Live logs
+    function appendLiveLog(log) {
+      const container = document.getElementById('liveLogsContainer');
+      const div = document.createElement('div');
+      div.className = 'log-item';
+      div.innerHTML = `
+        <span class="log-time">[${log.time}]</span>
+        <span class="log-source">[${log.source}]</span>
+        <span class="log-level-${log.level}">${log.level}</span>:
+        <span>${log.message || log.noiDung}</span>
+      `;
+      container.insertBefore(div, container.firstChild);
+    }
+
+    async function loadInitialLogs() {
+      try {
+        const res = await fetch('/api/system/logs?limit=30');
+        if (!res.ok) return;
+        const logs = await res.json();
+        const container = document.getElementById('liveLogsContainer');
+        container.innerHTML = logs.map(l => `
+          <div class="log-item">
+            <span class="log-time">[${l.time}]</span>
+            <span class="log-source">[${l.source}]</span>
+            <span class="log-level-${l.level}">${l.level}</span>:
+            <span>${l.content}</span>
+          </div>
+        `).join('');
+      } catch (e) {}
+    }
+
+    async function clearLogs() {
+      await fetch('/api/system/logs', { method: 'DELETE' });
+      document.getElementById('liveLogsContainer').innerHTML = '<div style="color:#64748b;text-align:center;padding:20px;">Đã xóa nhật ký.</div>';
+    }
+
+    // --- 12 KỊCH BẢN KIỂM THỬ TỰ ĐỘNG (BƯỚC 3) ---
+    const SCENARIOS = [
+      { id: 1, name: "1. Hai khách giữ cùng ô", desc: "Chống đặt trùng Serializable: Khách 1 giữ ô E1 thành công, Khách 2 cùng giữ ô E1 sẽ bị từ chối 409 Conflict.", expected: "Khách 1 giữ chỗ thành công (HELD), Khách 2 bị từ chối do trùng khung giờ (409 Conflict)." },
+      { id: 2, name: "2. Hết hạn thanh toán (EXPIRED)", desc: "Giữ chỗ ô E2 nhưng không thanh toán, tua đồng hồ quá 5 phút -> Worker tự chuyển EXPIRED và trả ô về FREE.", expected: "Đơn tự chuyển EXPIRED sau 5 phút không thanh toán, giải phóng ô E2 về FREE." },
+      { id: 3, name: "3. Quá hạn Check-in (NO_SHOW)", desc: "Đã thanh toán nhưng không đến bãi trong vòng T+15 phút -> Worker chuyển NO_SHOW không hoàn tiền, nhả ô về FREE.", expected: "Đơn chuyển NO_SHOW sau T+15 phút không đến bãi, không hoàn tiền, nhả ô E3 về FREE." },
+      { id: 4, name: "4. Quét mã không vào cổng", desc: "Quét mã thành công mở barie 60s nhưng xe không đi qua -> Barie đóng, hạn check-in không bị kéo dài vô cớ.", expected: "Cổng mở 60s, xe không đi qua thì cổng đóng, đơn giữ nguyên trạng thái PAID và hạn check-in gốc." },
+      { id: 5, name: "5. Vào bãi rồi quay ra ngay (ABANDONED)", desc: "Xe qua cổng vào (ENTERED) nhưng lập tức quay ra cổng mà không đỗ vào ô -> Chuyển ABANDONED, nhả ô đỗ về FREE.", expected: "Xe vào bãi nhưng quay ra ngay mà chưa đỗ ô -> Chuyển ABANDONED, nhả ô về FREE." },
+      { id: 6, name: "6. Bãi đông, CP gia hạn & 'Tôi đang kẹt'", desc: "Xe đang tìm chỗ được tự động gia hạn khi qua Checkpoint CP1 và khi khách bấm 'Tôi đang kẹt' trên app (+10 phút).", expected: "Qua CP1 gia hạn +5 phút, bấm 'Tôi đang kẹt' gia hạn thêm +5 phút (tổng +10 phút, 2 lần)." },
+      { id: 7, name: "7. Quá hạn vào ô tự đổi ô mới", desc: "Xe qua cổng nhưng không vào ô trong vòng 10 phút -> Worker tự chuyển sang ô FREE khác, nhả ô cũ về FREE.", expected: "Hết hạn 10 phút vào ô -> Hệ thống tự động chuyển sang ô FREE khác, nhả ô cũ về FREE." },
+      { id: 8, name: "8. Đỗ lấn vạch liền kề (OVERLAP)", desc: "Hai ô liền kề E1 & E2 cùng đo được cự ly 40-80cm -> Kích hoạt OVERLAP, đổi màu LED sang YELLOW và báo động Staff.", expected: "Hai ô liền kề cùng đo được cự ly 40-80cm -> Kích hoạt OVERLAP, LED vàng, cảnh báo Staff." },
+      { id: 9, name: "9. Mất điện thiết bị, Xe đỗ chui & Phục hồi Audit", desc: "Mất điện: Hàng E chuyển UNKNOWN; Xe đỗ chui vào E4; Có điện lại: Server chạy đối soát phát hiện đỗ chui và cảnh báo UNAUTHORIZED_PARKING.", expected: "Pha 1: Hàng E UNKNOWN; Pha 2: Xe đỗ chui tại E4 (30cm); Pha 3: Audit đối soát phát hiện đỗ chui, kích hoạt UNAUTHORIZED_PARKING, các ô còn lại về FREE." },
+      { id: 10, name: "10. Xe đỗ quá giờ đặt (OVERSTAY)", desc: "Xe đỗ quá thời hạn đã mua -> Chặn cổng ra, tính phí phạt theo phút (200đ/phút), Staff thu tiền thì mở cổng.", expected: "Quá giờ 15 phút -> Chặn cổng ra, tính phí phạt 3.000đ (200đ/phút), Staff thu tiền thì mở cổng." },
+      { id: 11, name: "11. Thanh toán chuyển khoản ngân hàng", desc: "Mô phỏng thanh toán chuyển khoản đúng mã giao dịch và số tiền -> Đơn chuyển PAID, sinh mã EntryCode.", expected: "Thanh toán chuyển khoản khớp mã và số tiền -> Đơn chuyển PAID, sinh EntryCode, idempotent." },
+      { id: 12, name: "12. Thanh toán tiền mặt & CashCode", desc: "Nhân viên thu tiền mặt tại quầy phát hành CashCode 6 ký tự Crockford, khách nhập CashCode để kích hoạt vé đỗ xe PAID.", expected: "Staff cấp mã CashCode 6 ký tự Crockford tại quầy, khách nhập CashCode -> Đơn chuyển PAID, sinh EntryCode." }
+    ];
+
+    function renderScenariosCards() {
+      const grid = document.getElementById('scenariosGrid');
+      grid.innerHTML = SCENARIOS.map(s => `
+        <div id="card-scen-${s.id}" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+              <strong style="font-size:1rem;color:#0f172a;">${s.name}</strong>
+              <span id="badge-scen-${s.id}" style="font-size:0.75rem;font-weight:700;padding:3px 8px;border-radius:99px;background:#f1f5f9;color:#64748b;">
+                Chưa chạy
+              </span>
+            </div>
+            <p style="font-size:0.8rem;color:#64748b;margin:0 0 12px 0;">${s.desc}</p>
+
+            <div style="background:#f8fafc;padding:10px;border-radius:8px;font-size:0.78rem;margin-bottom:12px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                  <strong style="color:#64748b;display:block;margin-bottom:3px;">🔍 TRẠNG THÁI TRƯỚC:</strong>
+                  <span id="before-scen-${s.id}" style="color:#475569;font-style:italic;">(Chưa chạy)</span>
+                </div>
+                <div>
+                  <strong style="color:#7c3aed;display:block;margin-bottom:3px;">🎯 TRẠNG THÁI SAU:</strong>
+                  <span id="after-scen-${s.id}" style="color:#475569;font-style:italic;">(Chưa chạy)</span>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:1px dashed #cbd5e1;padding-top:8px;">
+                <div>
+                  <strong style="color:#0284c7;display:block;margin-bottom:3px;">📋 KẾT QUẢ MONG ĐỢI:</strong>
+                  <span style="color:#334155;">${s.expected}</span>
+                </div>
+                <div>
+                  <strong style="color:#10b981;display:block;margin-bottom:3px;">⚡ THỰC TẾ (HỆ THỐNG):</strong>
+                  <span id="actual-scen-${s.id}" style="color:#64748b;font-style:italic;">(Chưa chạy thử nghiệm)</span>
+                </div>
+              </div>
+            </div>
+
+            <div id="steps-scen-${s.id}" style="font-size:0.74rem;color:#475569;display:none;background:#f1f5f9;padding:8px 10px;border-radius:6px;margin-bottom:10px;"></div>
+          </div>
+
+          <button id="btn-run-${s.id}" class="btn-control primary" style="width:100%;font-size:0.85rem;padding:8px;" onclick="runScenario(${s.id})">
+            ▶️ Chạy kịch bản ${s.id}
+          </button>
+        </div>
+      `).join('');
+    }
+
+    async function runScenario(id) {
+      const btn = document.getElementById(`btn-run-${id}`);
+      const badge = document.getElementById(`badge-scen-${id}`);
+      const actualEl = document.getElementById(`actual-scen-${id}`);
+      const beforeEl = document.getElementById(`before-scen-${id}`);
+      const afterEl = document.getElementById(`after-scen-${id}`);
+      const stepsEl = document.getElementById(`steps-scen-${id}`);
+
+      btn.disabled = true;
+      btn.textContent = `⏳ Đang chạy kịch bản ${id}...`;
+      badge.style.background = '#fef3c7';
+      badge.style.color = '#b45309';
+      badge.textContent = 'Đang chạy...';
+
+      try {
+        const res = await fetch(`/api/demo/scenarios/${id}/run`, { method: 'POST' });
+        const data = await res.json();
+
+        if (beforeEl && data.beforeState) {
+          beforeEl.style.fontStyle = 'normal';
+          beforeEl.textContent = data.beforeState;
+        }
+        if (afterEl && data.afterState) {
+          afterEl.style.fontStyle = 'normal';
+          afterEl.textContent = data.afterState;
+        }
+
+        if (res.ok && data.passed) {
+          badge.style.background = '#dcfce7';
+          badge.style.color = '#15803d';
+          badge.textContent = '✓ ĐẠT (PASS)';
+          actualEl.style.color = '#15803d';
+          actualEl.style.fontStyle = 'normal';
+          actualEl.textContent = data.actual;
+
+          if (data.steps && data.steps.length > 0) {
+            stepsEl.innerHTML = '<strong>Các bước xử lý:</strong><br>' + data.steps.map(st => `• ${st}`).join('<br>');
+            stepsEl.style.display = 'block';
+          }
+          showToast(`Kịch bản ${id} chạy THÀNH CÔNG! Đạt kết quả mong đợi.`, 'success');
+        } else {
+          badge.style.background = '#fee2e2';
+          badge.style.color = '#b91c1c';
+          badge.textContent = '✕ CHƯA ĐẠT (FAIL)';
+          actualEl.style.color = '#b91c1c';
+          actualEl.style.fontStyle = 'normal';
+          actualEl.textContent = data.actual || data.error || 'Thực thi không đúng kết quả.';
+          showToast(`Kịch bản ${id} CHƯA ĐẠT: ${data.actual || data.error}`, 'error');
+        }
+
+        loadSlots();
+      } catch (e) {
+        badge.style.background = '#fee2e2';
+        badge.style.color = '#b91c1c';
+        badge.textContent = '✕ LỖI HỆ THỐNG';
+        actualEl.textContent = 'Lỗi kết nối: ' + e.message;
+        showToast(`Lỗi chạy kịch bản ${id}: ` + e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = `▶️ Chạy lại kịch bản ${id}`;
+      }
+    }
+
+    async function runAllScenarios() {
+      if (!confirm("Hệ thống sẽ chạy tuần tự toàn bộ 12 kịch bản kiểm thử. Bạn có muốn bắt đầu?")) return;
+      showToast("Bắt đầu chạy tuần tự 12 kịch bản...", "info");
+
+      for (let i = 1; i <= 12; i++) {
+        await runScenario(i);
+        // Nghỉ ngắn giữa các kịch bản để quan sát realtime
+        await new Promise(r => setTimeout(r, 600));
+      }
+      showToast("Đã hoàn tất chạy 12 kịch bản kiểm thử tự động!", "success");
+    }
+
+    // Init
+    checkDemoStatus();
+    loadSlots();
+    loadInitialLogs();
+    renderScenariosCards();
+    startSignalR();
+  </script>
+</body>
+</html>

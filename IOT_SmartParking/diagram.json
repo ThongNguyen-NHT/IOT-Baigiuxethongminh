@@ -1,0 +1,223 @@
+{
+  "version": 1,
+  "author": "Smart Parking IoT Team",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_gate_in",
+      "top": -380,
+      "left": 350,
+      "attrs": { "distance": "200" }
+    },
+
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e1",
+      "top": -260,
+      "left": 350,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e2",
+      "top": -140,
+      "left": 350,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e3",
+      "top": -20,
+      "left": 350,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e4",
+      "top": 100,
+      "left": 350,
+      "attrs": { "distance": "200" }
+    },
+
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e5",
+      "top": -260,
+      "left": 650,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e6",
+      "top": -140,
+      "left": 650,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e7",
+      "top": -20,
+      "left": 650,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_e8",
+      "top": 100,
+      "left": 650,
+      "attrs": { "distance": "200" }
+    },
+
+    {
+      "type": "wokwi-servo",
+      "id": "barrier_in",
+      "top": 240,
+      "left": 350,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "barrier_out",
+      "top": 240,
+      "left": 550,
+      "attrs": {}
+    },
+
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_gate_out",
+      "top": 350,
+      "left": 350,
+      "attrs": { "color": "orange", "label": "GATE_OUT" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_cp1",
+      "top": 350,
+      "left": 490,
+      "attrs": { "color": "blue", "label": "CP1" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_cp2",
+      "top": 350,
+      "left": 630,
+      "attrs": { "color": "blue", "label": "CP2" }
+    },
+
+    {
+      "type": "wokwi-lcd2004",
+      "id": "statusDisplay",
+      "top": 440,
+      "left": 350,
+      "attrs": {
+        "pins": "i2c",
+        "background": "blue",
+        "color": "white"
+      }
+    },
+
+    {
+      "type": "wokwi-neopixel-canvas",
+      "id": "pixels",
+      "top": 590,
+      "left": 350,
+      "attrs": {
+        "rows": "5",
+        "cols": "10",
+        "pixelShape": "circle"
+      }
+    },
+
+    {
+      "type": "wokwi-text",
+      "id": "legend",
+      "top": 740,
+      "left": 350,
+      "attrs": {
+        "text": "DẢI NEOPIXEL 50 LED (5x10):\nHàng 0 (0-9): Lối đi chính | Hàng 1 (10-17): Ô E1-E8\nHàng 2 (18-25): D1-D8 | Hàng 3 (26-33): C1-C8 | Hàng 4 (34-49): B1-B8 & A1-A8"
+      }
+    }
+  ],
+
+  "connections": [
+    ["esp:23", "sensor_gate_in:TRIG", "green", []],
+    ["esp:23", "sensor_e1:TRIG", "green", []],
+    ["esp:23", "sensor_e2:TRIG", "green", []],
+    ["esp:23", "sensor_e3:TRIG", "green", []],
+    ["esp:23", "sensor_e4:TRIG", "green", []],
+    ["esp:23", "sensor_e5:TRIG", "green", []],
+    ["esp:23", "sensor_e6:TRIG", "green", []],
+    ["esp:23", "sensor_e7:TRIG", "green", []],
+    ["esp:23", "sensor_e8:TRIG", "green", []],
+
+    ["esp:34", "sensor_gate_in:ECHO", "blue", []],
+    ["esp:35", "sensor_e1:ECHO", "blue", []],
+    ["esp:VP", "sensor_e2:ECHO", "blue", []],
+    ["esp:VN", "sensor_e3:ECHO", "blue", []],
+    ["esp:13", "sensor_e4:ECHO", "blue", []],
+    ["esp:14", "sensor_e5:ECHO", "blue", []],
+    ["esp:25", "sensor_e6:ECHO", "blue", []],
+    ["esp:26", "sensor_e7:ECHO", "blue", []],
+    ["esp:27", "sensor_e8:ECHO", "blue", []],
+
+    ["esp:VIN", "sensor_gate_in:VCC", "red", []],
+    ["esp:VIN", "sensor_e1:VCC", "red", []],
+    ["esp:VIN", "sensor_e2:VCC", "red", []],
+    ["esp:VIN", "sensor_e3:VCC", "red", []],
+    ["esp:VIN", "sensor_e4:VCC", "red", []],
+    ["esp:VIN", "sensor_e5:VCC", "red", []],
+    ["esp:VIN", "sensor_e6:VCC", "red", []],
+    ["esp:VIN", "sensor_e7:VCC", "red", []],
+    ["esp:VIN", "sensor_e8:VCC", "red", []],
+
+    ["esp:GND.1", "sensor_gate_in:GND", "black", []],
+    ["esp:GND.1", "sensor_e1:GND", "black", []],
+    ["esp:GND.1", "sensor_e2:GND", "black", []],
+    ["esp:GND.1", "sensor_e3:GND", "black", []],
+    ["esp:GND.1", "sensor_e4:GND", "black", []],
+    ["esp:GND.1", "sensor_e5:GND", "black", []],
+    ["esp:GND.1", "sensor_e6:GND", "black", []],
+    ["esp:GND.1", "sensor_e7:GND", "black", []],
+    ["esp:GND.1", "sensor_e8:GND", "black", []],
+
+    ["esp:4", "barrier_in:PWM", "orange", []],
+    ["esp:VIN", "barrier_in:V+", "red", []],
+    ["esp:GND.1", "barrier_in:GND", "black", []],
+
+    ["esp:16", "barrier_out:PWM", "orange", []],
+    ["esp:VIN", "barrier_out:V+", "red", []],
+    ["esp:GND.1", "barrier_out:GND", "black", []],
+
+    ["esp:18", "btn_gate_out:1.l", "blue", []],
+    ["esp:GND.1", "btn_gate_out:2.l", "black", []],
+
+    ["esp:19", "btn_cp1:1.l", "blue", []],
+    ["esp:GND.1", "btn_cp1:2.l", "black", []],
+
+    ["esp:32", "btn_cp2:1.l", "blue", []],
+    ["esp:GND.1", "btn_cp2:2.l", "black", []],
+
+    ["esp:21", "statusDisplay:SDA", "green", []],
+    ["esp:22", "statusDisplay:SCL", "blue", []],
+    ["esp:VIN", "statusDisplay:VCC", "red", []],
+    ["esp:GND.1", "statusDisplay:GND", "black", []],
+
+    ["esp:33", "pixels:DIN", "purple", []],
+    ["esp:VIN", "pixels:VCC", "red", []],
+    ["esp:GND.1", "pixels:GND", "black", []]
+  ],
+  "serialMonitor": {
+    "display": "terminal",
+    "convertEol": true
+  }
+}

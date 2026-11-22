@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bàn Trực Nhân Viên | Smart Parking IoT</title>
+  <link rel="stylesheet" href="style.css?v=20261122-1">
+  <!-- SignalR Client CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .staff-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+    .staff-sidebar {
+      width: 260px;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .staff-main {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .staff-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      margin-bottom: 4px;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover, .nav-btn.active {
+      background: #1e293b;
+      color: #ffffff;
+    }
+    .nav-btn.active {
+      border-left: 4px solid #f59e0b;
+      background: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+    }
+    .badge-count {
+      margin-left: auto;
+      background: #ef4444;
+      color: #ffffff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 99px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    th {
+      background: #f8fafc;
+      color: #64748b;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      color: #334155;
+      white-space: nowrap;
+    }
+    tr:hover td {
+      background: #f8fafc;
+    }
+    .btn-action {
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-amber { background: #f59e0b; color: #ffffff; }
+    .btn-amber:hover { background: #d97706; }
+    .btn-blue { background: #1769e0; color: #ffffff; }
+    .btn-blue:hover { background: #1255b8; }
+    .btn-red { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .btn-red:hover { background: #fecaca; }
+    .btn-green { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .btn-green:hover { background: #bbf7d0; }
+
+    /* STATUS PILLS */
+    .status-pill {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .pill-pending { background: #fef3c7; color: #b45309; }
+    .pill-paid { background: #e0f2fe; color: #0369a1; }
+    .pill-entered { background: #ede9fe; color: #6d28d9; }
+    .pill-parked { background: #fee2e2; color: #b91c1c; }
+    .pill-overstay { background: #ef4444; color: #ffffff; animation: pulseRed 1.5s infinite; }
+    @keyframes pulseRed {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.75; }
+    }
+
+    /* SIGNALR BADGE */
+    .signalr-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .signalr-badge.connected {
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+    }
+    .signalr-badge.reconnecting {
+      background: #fffbeb;
+      color: #d97706;
+      border: 1px solid #fde68a;
+    }
+    .signalr-badge.disconnected {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+    .signalr-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* PRIORITY CARDS */
+    .priority-section {
+      margin-bottom: 20px;
+    }
+    .priority-badge {
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+    }
+    .priority-p1 { background: #fee2e2; color: #b91c1c; border-left: 4px solid #dc2626; }
+    .priority-p2 { background: #fff7ed; color: #c2410c; border-left: 4px solid #ea580c; }
+    .priority-p3 { background: #fefce8; color: #854d0e; border-left: 4px solid #ca8a04; }
+    .priority-p4 { background: #f0fdf4; color: #166534; border-left: 4px solid #16a34a; }
+
+    /* Modal CashCode Popup */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-box {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 24px;
+      width: 90%;
+      max-width: 440px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    .cashcode-display {
+      font-size: 2.8rem;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      color: #f59e0b;
+      font-family: ui-monospace, monospace;
+      padding: 12px;
+      background: #fffbeb;
+      border: 2px dashed #fde68a;
+      border-radius: 14px;
+      margin: 16px 0;
+    }
+    .form-input {
+      padding: 10px 14px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 6px;
+    }
+
+    /* RESPONSIVE 360px - 768px */
+    @media (max-width: 768px) {
+      .staff-layout { flex-direction: column; }
+      .staff-sidebar { width: 100%; padding: 14px; }
+      .staff-main { padding: 14px; }
+      .nav-btn { font-size: 0.85rem; padding: 9px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="staff-layout">
+    <!-- Sidebar -->
+    <aside class="staff-sidebar">
+      <div class="staff-brand">
+        <div style="font-size: 1.4rem;">🛡️</div>
+        <div>
+          <strong style="display: block; font-size: 1.05rem;">SmartParking IoT</strong>
+          <span style="font-size: 0.75rem; color: #94a3b8;">Bàn Trực Nhân Viên / Bảo Vệ</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 16px; padding: 12px; background: #1e293b; border-radius: 10px;">
+        <div style="font-size: 0.72rem; color: #94a3b8;">Nhân viên ca trực</div>
+        <strong id="staffName" style="color: #f59e0b; font-size: 0.95rem;">staff01</strong>
+        <div style="font-size: 0.7rem; color: #10b981; margin-top: 2px;">● Đang trực tuyến</div>
+      </div>
+
+      <nav style="flex: 1;">
+        <button class="nav-btn active" onclick="switchSection('priority', this)">
+          <span>🎯</span> Việc cần xử lý gấp
+          <span id="priorityTotalBadge" class="badge-count" style="display: none;">0</span>
+        </button>
+        <button class="nav-btn" onclick="switchSection('cash', this)">
+          <span>💵</span> Thu tiền mặt tại quầy
+          <span id="cashBadge" class="badge-count" style="display: none;">0</span>
+        </button>
+        <button class="nav-btn" onclick="switchSection('activeVehicles', this)">
+          <span>🚗</span> Xe trong bãi & OVERSTAY
+          <span id="overstayBadge" class="badge-count" style="display: none;">0</span>
+        </button>
+        <button class="nav-btn" onclick="switchSection('unlock', this)">
+          <span>🔓</span> Mở khóa mã EntryCode
+          <span id="lockedBadge" class="badge-count" style="display: none;">0</span>
+        </button>
+        <button class="nav-btn" onclick="switchSection('noSlot', this)">
+          <span>⚠️</span> Xử lý kẹt xe / Hết ô
+          <span id="noSlotBadge" class="badge-count" style="display: none;">0</span>
+        </button>
+        <button class="nav-btn" onclick="switchSection('alerts', this)">
+          <span>🔔</span> Cảnh báo thời gian thực
+        </button>
+      </nav>
+
+      <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid #1e293b;">
+        <a href="/index.html" style="color: #94a3b8; font-size: 0.8rem; text-decoration: none; display: block; margin-bottom: 6px;">← Về trang Đăng nhập</a>
+        <a href="/admin.html" style="color: #38bdf8; font-size: 0.8rem; text-decoration: none; display: block;">Mở Sơ đồ 40 ô (Admin) →</a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="staff-main">
+      <!-- Top Bar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h1 id="pageTitle" style="margin: 0 0 4px 0; font-size: 1.5rem;">🎯 Việc Cần Xử Lý Gấp (Theo Độ Ưu Tiên)</h1>
+          <p id="pageDesc" style="margin: 0; color: #64748b; font-size: 0.88rem;">Danh sách công việc tự động xếp theo 4 mức ưu tiên nghiệp vụ</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div id="staffSignalRBadge" class="signalr-badge connected"><span class="signalr-dot"></span> Đã kết nối</div>
+          <button class="btn-action btn-blue" onclick="syncStaffData()">🔄 Đồng bộ lại</button>
+        </div>
+      </div>
+
+      <!-- SECTION 0: BẢNG VIỆC CẦN XỬ LÝ THEO ĐỘ ƯU TIÊN (MẶC ĐỊNH) -->
+      <div id="secPriority">
+        <!-- Ưu tiên 1: OVERSTAY -->
+        <div class="card priority-p1 priority-section">
+          <div class="card-title">
+            <span>🚨 Ưu Tiên 1: Xe Quá Giờ Đỗ (OVERSTAY) - Thu Tiền Phạt Cổng Ra</span>
+            <span id="p1Count" class="badge-count" style="margin-left:0;">0 xe</span>
+          </div>
+          <div style="font-size:0.83rem;color:#7f1d1d;margin-bottom:12px;">
+            Xe gửi quá thời gian cho phép, barie cổng ra tạm khóa. Công thức phạt: <b>200 VNĐ / phút</b>. Thu tiền xong nhân viên xác nhận để mở barie ra.
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mã đơn</th>
+                  <th>Biển số xe</th>
+                  <th>Ô đỗ</th>
+                  <th>Hạn gửi ban đầu</th>
+                  <th>Thời gian quá hạn</th>
+                  <th>Phí phạt cần thu</th>
+                  <th>Thao tác nhân viên</th>
+                </tr>
+              </thead>
+              <tbody id="p1OverstayTbody">
+                <tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Không có xe nào quá hạn đỗ.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Ưu tiên 2: Kẹt xe / Hết ô -->
+        <div class="card priority-p2 priority-section">
+          <div class="card-title">
+            <span>⚠️ Ưu Tiên 2: Hết Ô Đỗ / Xe Tìm Chỗ Quá Lâu (HOLD & Timeout)</span>
+            <span id="p2Count" class="badge-count" style="margin-left:0;background:#ea580c;">0 xe</span>
+          </div>
+          <div style="font-size:0.83rem;color:#9a3412;margin-bottom:12px;">
+            Xe đã qua cổng vào (ENTERED) nhưng quá 10 phút chưa vào được ô, hoặc cổng đang giữ trạng thái HOLD. Đổi ô trống mới hoặc cho xe ra miễn phí.
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mã đơn</th>
+                  <th>Biển số xe</th>
+                  <th>Ô chỉ định</th>
+                  <th>Giờ qua cổng vào</th>
+                  <th>Số lần gia hạn</th>
+                  <th>Điều phối xử lý</th>
+                </tr>
+              </thead>
+              <tbody id="p2NoSlotTbody">
+                <tr><td colspan="6" style="text-align:center;padding:16px;color:#94a3b8;">Không có xe nào bị kẹt tìm ô.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Ưu tiên 3: Mã bị khóa -->
+        <div class="card priority-p3 priority-section">
+          <div class="card-title">
+            <span>🔒 Ưu Tiên 3: Mã Vào Cổng Bị Khóa (LOCKED EntryCode)</span>
+            <span id="p3Count" class="badge-count" style="margin-left:0;background:#ca8a04;">0 mã</span>
+          </div>
+          <div style="font-size:0.83rem;color:#713f12;margin-bottom:12px;">
+            Khách nhập/quét sai mã quá 3 lần nên mã bị khóa tự động để chống gian lận. Đối soát thông tin khách và mở khóa tại đây:
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mã EntryCode</th>
+                  <th>Mã đơn</th>
+                  <th>Biển số xe</th>
+                  <th>Số lần quét sai</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="p3LockedTbody">
+                <tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Không có mã nào bị khóa.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Ưu tiên 4: Cảnh báo realtime -->
+        <div class="card priority-p4 priority-section">
+          <div class="card-title">
+            <span>🔔 Ưu Tiên 4: Cảnh Báo OVERLAP & Đỗ Chui (Cần Kiểm Tra Thực Địa)</span>
+          </div>
+          <div id="p4AlertsList" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="color:#64748b;font-size:0.85rem;padding:8px;">Chưa có cảnh báo đỗ lấn vạch hoặc đỗ chui nào.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 1: ĐƠN CHỜ TIỀN MẶT -->
+      <div id="secCash" class="card" style="display: none;">
+        <div class="card-title">
+          <span>Danh sách đơn chờ thanh toán tiền mặt</span>
+          <span id="cashOrderCount" style="font-size: 0.85rem; color: #64748b;">0 đơn</span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã đơn</th>
+                <th>Khách hàng</th>
+                <th>Biển số xe</th>
+                <th>Ô đỗ</th>
+                <th>Số tiền cần thu</th>
+                <th>Hạn nộp tiền</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="cashOrdersTbody">
+              <tr><td colspan="7" style="text-align:center; padding:20px; color:#64748b;">Đang tải danh sách đơn...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION 2: TẤT CẢ XE TRONG BÃI -->
+      <div id="secActiveVehicles" class="card" style="display: none;">
+        <div class="card-title">
+          <span>Tất cả xe đang có mặt trong bãi đỗ</span>
+          <span id="activeVehicleCount" style="font-size: 0.85rem; color: #64748b;">0 xe</span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã đơn</th>
+                <th>Biển số</th>
+                <th>Ô đỗ</th>
+                <th>Giờ vào cổng</th>
+                <th>Hạn gửi xe</th>
+                <th>Trạng thái</th>
+                <th>Quá giờ & Phí phạt</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="activeVehiclesTbody">
+              <tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">Đang tải...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION 3: MỞ KHÓA MÃ ENTRYCODE -->
+      <div id="secUnlock" class="card" style="display: none; max-width: 580px;">
+        <div class="card-title">
+          <span>Mở khóa mã EntryCode thủ công</span>
+        </div>
+        <form onsubmit="handleUnlockEntryCode(event)">
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 0.82rem; font-weight: 700; color: #475569; text-transform: uppercase;">Nhập mã EntryCode cần mở khóa</label>
+            <input type="text" id="inputUnlockCode" class="form-input" placeholder="Ví dụ: E78241" style="font-size: 1.2rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;" required>
+          </div>
+          <button type="submit" class="btn-action btn-blue" style="padding: 10px 18px;">
+            🔓 Mở khóa mã ngay
+          </button>
+        </form>
+        <div id="unlockResultBox" style="margin-top: 14px; display: none;"></div>
+      </div>
+
+      <!-- SECTION 4: XỬ LÝ KẸT XE / HẾT Ô TRỐNG -->
+      <div id="secNoSlot" class="card" style="display: none;">
+        <div class="card-title">
+          <span>Xử lý ca kẹt xe & Hết ô đỗ (NoSlotPolicy = FreeExit)</span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã đơn</th>
+                <th>Biển số</th>
+                <th>Ô chỉ định</th>
+                <th>Giờ qua cổng</th>
+                <th>Gia hạn</th>
+                <th>Xử lý điều phối</th>
+              </tr>
+            </thead>
+            <tbody id="noSlotTbody">
+              <tr><td colspan="6" style="text-align:center; padding:20px; color:#64748b;">Đang tải...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION 5: CẢNH BÁO REALTIME -->
+      <div id="secAlerts" class="card" style="display: none;">
+        <div class="card-title">
+          <span>Nhật ký Cảnh báo Hệ thống Realtime (SignalR)</span>
+          <button class="btn-action btn-red" onclick="document.getElementById('alertsContainer').innerHTML=''">Xóa nhật ký</button>
+        </div>
+        <div id="alertsContainer" style="display: grid; gap: 10px;">
+          <div style="color: #64748b; font-size: 0.85rem; padding: 12px;">Chưa có cảnh báo mới nào phát sinh.</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: HIỂN THỊ MÃ CASHCODE SAU KHI THU TIỀN -->
+  <div id="modalCashCode" class="modal-overlay">
+    <div class="modal-box">
+      <div style="font-size: 2.2rem; margin-bottom: 8px;">💵</div>
+      <h3 style="margin: 0 0 8px 0; color: #0f172a;">Đã Thu Tiền Mặt Thành Công!</h3>
+      <p style="color: #64748b; font-size: 0.88rem; margin: 0;">
+        Đọc mã <strong>CashCode 6 ký tự Crockford</strong> này cho khách hàng:
+      </p>
+      <div id="modalCashCodeNumber" class="cashcode-display">------</div>
+      <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 20px;">
+        Đơn hàng: <strong id="modalCashOrderId">#0</strong> | Hạn sử dụng: 30 phút
+      </div>
+      <button class="btn-action btn-amber" style="width: 100%; padding: 12px; font-size: 1rem; justify-content: center;" onclick="closeModalCashCode()">
+        Đã bàn giao mã cho khách
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const currentToken = localStorage.getItem('smartParkingToken');
+    const currentUser = JSON.parse(localStorage.getItem('smartParkingUser') || '{"username":"staff01","role":"Staff"}');
+    let currentTab = 'priority';
+    let signalrConnection = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!currentToken) {
+        window.location.href = '/index.html';
+        return;
+      }
+      document.getElementById('staffName').textContent = currentUser.username || 'staff01';
+
+      initSignalR();
+      syncStaffData();
+    });
+
+    function switchSection(sec, btnEl) {
+      currentTab = sec;
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+
+      document.getElementById('secPriority').style.display = sec === 'priority' ? 'block' : 'none';
+      document.getElementById('secCash').style.display = sec === 'cash' ? 'block' : 'none';
+      document.getElementById('secActiveVehicles').style.display = sec === 'activeVehicles' ? 'block' : 'none';
+      document.getElementById('secUnlock').style.display = sec === 'unlock' ? 'block' : 'none';
+      document.getElementById('secNoSlot').style.display = sec === 'noSlot' ? 'block' : 'none';
+      document.getElementById('secAlerts').style.display = sec === 'alerts' ? 'block' : 'none';
+
+      const titles = {
+        priority: ['🎯 Việc Cần Xử Lý Gấp (Theo Độ Ưu Tiên)', 'Danh sách công việc tự động xếp theo 4 mức ưu tiên nghiệp vụ'],
+        cash: ['Đơn Chờ Thu Tiền Mặt', 'Thu tiền tại quầy và cấp mã CashCode 6 ký tự Crockford cho khách hàng'],
+        activeVehicles: ['Xe Đang Trong Bãi & Quá Giờ', 'Theo dõi thời lượng đỗ xe và thu phí phạt OVERSTAY tại cổng ra'],
+        unlock: ['Mở Khóa Mã EntryCode', 'Xử lý mã vào cổng bị khóa do nhập sai quá 3 lần'],
+        noSlot: ['Điều Phối & Hết Ô Trống', 'Xử lý tình huống xe đã qua cổng nhưng không còn ô (NoSlotPolicy = FreeExit)'],
+        alerts: ['Cảnh Báo Realtime', 'Danh sách cảnh báo đỗ lấn vạch, mất điện, cổng kẹt thời gian thực']
+      };
+
+      if (titles[sec]) {
+        document.getElementById('pageTitle').textContent = titles[sec][0];
+        document.getElementById('pageDesc').textContent = titles[sec][1];
+      }
+
+      syncStaffData();
+    }
+
+    // Đồng bộ lại toàn bộ dữ liệu bàn trực nhân viên
+    async function syncStaffData() {
+      await Promise.all([
+        loadPriorityItems(),
+        loadCashOrders(),
+        loadActiveVehicles(),
+        loadLockedCodesList(),
+        loadNoSlotCandidates()
+      ]);
+    }
+
+    // Tải và tổng hợp 4 mức ưu tiên
+    async function loadPriorityItems() {
+      try {
+        const [bookingsRes, lockedRes] = await Promise.all([
+          fetch('/api/bookings/admin/all?status=ALL'),
+          fetch('/api/gate/entry-code/locked', { headers: { 'Authorization': 'Bearer ' + currentToken } })
+        ]);
+
+        const allBookings = bookingsRes.ok ? await bookingsRes.json() : [];
+        const lockedCodes = lockedRes.ok ? await lockedRes.json() : [];
+
+        const now = new Date();
+
+        // 1. P1: OVERSTAY
+        const overstayList = allBookings.filter(b => {
+          if (b.trangThai === 'OVERSTAY') return true;
+          if (b.trangThai === 'PARKED' && new Date(b.thoiGianHenT) < now) {
+            // Kiểm tra hạn kết thúc
+            const dur = b.goiThoiLuongGio || 1;
+            const end = new Date(new Date(b.thoiGianHenT).getTime() + dur * 3600000);
+            return now > end;
+          }
+          return false;
+        });
+
+        document.getElementById('p1Count').textContent = overstayList.length + ' xe';
+        renderP1Table(overstayList, now);
+
+        // 2. P2: Kẹt xe / Hết ô (ENTERED)
+        const enteredList = allBookings.filter(b => b.trangThai === 'ENTERED');
+        document.getElementById('p2Count').textContent = enteredList.length + ' xe';
+        renderP2Table(enteredList);
+
+        // 3. P3: Locked codes
+        document.getElementById('p3Count').textContent = lockedCodes.length + ' mã';
+        renderP3Table(lockedCodes);
+
+        // Tổng số việc gấp trên badge sidebar
+        const totalUrgent = overstayList.length + enteredList.length + lockedCodes.length;
+        const totalBadge = document.getElementById('priorityTotalBadge');
+        if (totalUrgent > 0) {
+          totalBadge.textContent = totalUrgent;
+          totalBadge.style.display = 'inline-block';
+        } else {
+          totalBadge.style.display = 'none';
+        }
+
+        const lockedBadge = document.getElementById('lockedBadge');
+        if (lockedCodes.length > 0) {
+          lockedBadge.textContent = lockedCodes.length;
+          lockedBadge.style.display = 'inline-block';
+        } else {
+          lockedBadge.style.display = 'none';
+        }
+      } catch (e) {
+        console.error("Lỗi tải priority items:", e);
+      }
+    }
+
+    function renderP1Table(list, now) {
+      const tbody = document.getElementById('p1OverstayTbody');
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">Hiện không có xe nào quá giờ đỗ.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = list.map(b => {
+        const dur = b.goiThoiLuongGio || 1;
+        const end = new Date(new Date(b.thoiGianHenT).getTime() + dur * 3600000);
+        const overstayMins = Math.max(1, Math.floor((now - end) / 60000));
+        const penalty = overstayMins * 200;
+
+        return `
+          <tr>
+            <td><strong>#${b.maDon}</strong></td>
+            <td><strong style="color:#1769e0;">${b.bienSos.join(', ')}</strong></td>
+            <td><strong>${b.viTris.join(', ')}</strong></td>
+            <td>${formatDateTime(end)}</td>
+            <td><strong style="color:#ef4444;">Quá ${overstayMins} phút</strong></td>
+            <td><strong style="color:#dc2626;">${penalty.toLocaleString('vi-VN')} đ</strong></td>
+            <td>
+              <button class="btn-action btn-red" onclick="confirmOverstayExit(${b.maDon}, ${penalty})">
+                💵 Thu ${penalty.toLocaleString('vi-VN')}đ & Cho Ra
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderP2Table(list) {
+      const tbody = document.getElementById('p2NoSlotTbody');
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#94a3b8;">Không có xe nào đang tìm ô.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = list.map(b => `
+        <tr>
+          <td><strong>#${b.maDon}</strong></td>
+          <td><strong style="color:#1769e0;">${b.bienSos.join(', ')}</strong></td>
+          <td>${b.viTris.join(', ')}</td>
+          <td>${formatDateTime(b.thoiGianHenT)}</td>
+          <td>0 lần</td>
+          <td>
+            <button class="btn-action btn-red" onclick="resolveNoSlot(${b.maDon}, 'FREE_EXIT')">🆓 Cho Ra Miễn Phí</button>
+            <button class="btn-action btn-blue" style="margin-left:4px;" onclick="promptReassignSlot(${b.maDon})">🔄 Đổi Ô Khác</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderP3Table(list) {
+      const tbody = document.getElementById('p3LockedTbody');
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#94a3b8;">Không có mã vào cổng nào bị khóa.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = list.map(m => `
+        <tr>
+          <td><code style="font-size:1.1rem;font-weight:800;color:#dc2626;">${m.code}</code></td>
+          <td>#${m.orderId}</td>
+          <td><strong>${m.plate}</strong></td>
+          <td><span style="color:#ea580c;font-weight:700;">${m.soLanQuet} lần quét sai</span></td>
+          <td>
+            <button class="btn-action btn-green" onclick="unlockCodeDirect('${m.code}')">
+              🔓 Mở Khóa Mã
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function unlockCodeDirect(code) {
+      if (!confirm(`Xác nhận mở khóa mã vào cổng ${code}?`)) return;
+      try {
+        const res = await fetch(`/api/gate/entry-code/${encodeURIComponent(code)}/unlock`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) throw new Error('Không thể mở khóa mã');
+        alert(`Đã mở khóa mã ${code} thành công!`);
+        syncStaffData();
+      } catch (e) {
+        alert('Lỗi: ' + e.message);
+      }
+    }
+
+    // 1. Tải danh sách đơn chờ tiền mặt
+    async function loadCashOrders() {
+      try {
+        const res = await fetch('/api/bookings?status=PENDING_PAYMENT', {
+          headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) return;
+        const list = await res.json();
+
+        const cashOrders = list.filter(o => o.phuongThucThanhToan === 'TIEN_MAT' || o.phuongThucThanhToan === 'CASH' || !o.phuongThucThanhToan);
+        document.getElementById('cashOrderCount').textContent = cashOrders.length + ' đơn';
+
+        const badge = document.getElementById('cashBadge');
+        if (cashOrders.length > 0) {
+          badge.textContent = cashOrders.length;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+
+        const tbody = document.getElementById('cashOrdersTbody');
+        if (!cashOrders || cashOrders.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#64748b;">Không có đơn nào đang chờ tiền mặt.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = cashOrders.map(o => `
+          <tr>
+            <td><strong>#${o.maDon}</strong></td>
+            <td>${o.tenKhachHang || 'Khách #' + o.maTaiKhoan}</td>
+            <td><strong style="color:#1769e0;">${o.bienSo || '---'}</strong></td>
+            <td><span class="status-pill pill-paid">${o.danhSachViTri.join(', ') || '---'}</span></td>
+            <td><strong style="color:#d97706; font-size:1.05rem;">${o.tongTien.toLocaleString('vi-VN')} đ</strong></td>
+            <td><span style="font-size:0.8rem; color:#64748b;">${formatDateTime(o.hanThanhToan)}</span></td>
+            <td>
+              <button class="btn-action btn-amber" onclick="confirmCashPayment(${o.maDon}, ${o.tongTien})">
+                💵 Thu tiền & Cấp mã CashCode
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function confirmCashPayment(maDon, amount) {
+      if (!confirm(`Xác nhận đã nhận đủ ${amount.toLocaleString('vi-VN')} VNĐ tiền mặt cho đơn #${maDon}?`)) return;
+
+      try {
+        const res = await fetch('/api/payment/cash/confirm', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + currentToken
+          },
+          body: JSON.stringify({ maDon: maDon })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Lỗi xác nhận tiền mặt');
+        }
+
+        const data = await res.json();
+        document.getElementById('modalCashCodeNumber').textContent = data.cashCode;
+        document.getElementById('modalCashOrderId').textContent = '#' + maDon;
+        document.getElementById('modalCashCode').classList.add('open');
+        syncStaffData();
+      } catch (err) {
+        alert('Lỗi: ' + err.message);
+      }
+    }
+
+    function closeModalCashCode() {
+      document.getElementById('modalCashCode').classList.remove('open');
+    }
+
+    // 2. Tải danh sách xe trong bãi
+    async function loadActiveVehicles() {
+      try {
+        const res = await fetch('/api/bookings?status=PARKED,ENTERED,OVERSTAY', {
+          headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) return;
+        const list = await res.json();
+
+        document.getElementById('activeVehicleCount').textContent = list.length + ' xe';
+        const tbody = document.getElementById('activeVehiclesTbody');
+        if (!list || list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#64748b;">Bãi xe hiện đang trống.</td></tr>';
+          return;
+        }
+
+        const now = new Date();
+        tbody.innerHTML = list.map(v => {
+          const endTime = new Date(v.thoiGianKetThucDuKien);
+          const isOverstay = (v.trangThai === 'OVERSTAY') || (now > endTime && v.trangThai === 'PARKED');
+          let overstayMinutes = 0;
+          let penalty = 0;
+
+          if (isOverstay) {
+            overstayMinutes = Math.max(1, Math.floor((now - endTime) / 60000));
+            penalty = overstayMinutes * 200;
+          }
+
+          return `
+            <tr>
+              <td><strong>#${v.maDon}</strong></td>
+              <td><strong style="color:#1769e0; font-size:1rem;">${v.bienSo || '---'}</strong></td>
+              <td><strong>${v.danhSachViTri.join(', ') || '---'}</strong></td>
+              <td>${formatDateTime(v.thoiGianVaoCong)}</td>
+              <td>${formatDateTime(v.thoiGianKetThucDuKien)}</td>
+              <td>
+                <span class="status-pill pill-${isOverstay ? 'overstay' : v.trangThai.toLowerCase()}">
+                  ${isOverstay ? 'OVERSTAY' : v.trangThai}
+                </span>
+              </td>
+              <td>
+                ${isOverstay ? `
+                  <strong style="color:#ef4444;">Quá ${overstayMinutes} phút</strong><br>
+                  <span style="font-size:0.8rem; color:#dc2626;">Phạt: ${penalty.toLocaleString('vi-VN')} đ</span>
+                ` : '<span style="color:#10b981;">Trong hạn</span>'}
+              </td>
+              <td>
+                ${isOverstay ? `
+                  <button class="btn-action btn-red" onclick="confirmOverstayExit(${v.maDon}, ${penalty})">
+                    Thu phạt & Cho ra
+                  </button>
+                ` : `<span style="color:#64748b; font-size:0.8rem;">Đang đỗ</span>`}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function confirmOverstayExit(orderId, penalty) {
+      if (!confirm(`Xác nhận đã thu ${penalty.toLocaleString('vi-VN')} VNĐ phí phạt quá giờ cho xe đơn #${orderId} và mở cổng barie ra?`)) return;
+
+      try {
+        const res = await fetch('/api/gate/out/overstay/confirm', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + currentToken
+          },
+          body: JSON.stringify({
+            orderId: orderId,
+            penaltyAmount: penalty,
+            note: 'Nhân viên thu tiền mặt tại quầy cổng ra'
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Lỗi xác nhận thu phí quá giờ');
+        }
+
+        alert('Đã ghi nhận nộp phạt thành công và mở barie ra!');
+        syncStaffData();
+      } catch (e) {
+        alert('Lỗi: ' + e.message);
+      }
+    }
+
+    async function handleUnlockEntryCode(e) {
+      e.preventDefault();
+      const code = document.getElementById('inputUnlockCode').value.trim();
+      const resBox = document.getElementById('unlockResultBox');
+
+      try {
+        const res = await fetch(`/api/gate/entry-code/${encodeURIComponent(code)}/unlock`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Mở khóa thất bại');
+        }
+
+        resBox.innerHTML = `
+          <div style="background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; padding:12px; border-radius:8px;">
+            ✅ <strong>Thành công:</strong> Đã mở khóa mã <strong>${code}</strong>. Khách có thể tiếp tục quét tại cổng.
+          </div>
+        `;
+        resBox.style.display = 'block';
+        document.getElementById('inputUnlockCode').value = '';
+        syncStaffData();
+      } catch (err) {
+        resBox.innerHTML = `
+          <div style="background:#fee2e2; border:1px solid #fca5a5; color:#991b1b; padding:12px; border-radius:8px;">
+            ✕ <strong>Lỗi:</strong> ${err.message}
+          </div>
+        `;
+        resBox.style.display = 'block';
+      }
+    }
+
+    async function loadLockedCodesList() {
+      // Đã load trong loadPriorityItems()
+    }
+
+    async function loadNoSlotCandidates() {
+      try {
+        const res = await fetch('/api/bookings?status=ENTERED', {
+          headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) return;
+        const list = await res.json();
+
+        const badge = document.getElementById('noSlotBadge');
+        if (list.length > 0) {
+          badge.textContent = list.length;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+
+        const tbody = document.getElementById('noSlotTbody');
+        if (!list || list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#64748b;">Hiện không có xe nào đang tìm ô (ENTERED).</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = list.map(o => `
+          <tr>
+            <td><strong>#${o.maDon}</strong></td>
+            <td><strong>${o.bienSo || '---'}</strong></td>
+            <td><span class="status-pill pill-entered">${o.danhSachViTri.join(', ') || '---'}</span></td>
+            <td>${formatDateTime(o.thoiGianVaoCong)}</td>
+            <td>${o.soLanGiaHan || 0} lần</td>
+            <td>
+              <button class="btn-action btn-red" onclick="resolveNoSlot(${o.maDon}, 'FREE_EXIT')">🆓 Cho ra miễn phí</button>
+              <button class="btn-action btn-blue" style="margin-left:4px;" onclick="promptReassignSlot(${o.maDon})">🔄 Đổi ô khác</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function resolveNoSlot(orderId, action, newSlotId = null) {
+      if (!confirm(`Xác nhận xử lý đơn #${orderId}: ${action === 'FREE_EXIT' ? 'Cho ra miễn phí (FreeExit)' : 'Đổi sang ô ' + newSlotId}?`)) return;
+
+      try {
+        const res = await fetch(`/api/bookings/${orderId}/resolve-no-slot`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + currentToken
+          },
+          body: JSON.stringify({
+            action: action,
+            newSlotId: newSlotId,
+            reason: 'Nhân viên trực điều phối'
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Lỗi xử lý');
+        }
+
+        alert('Xử lý thành công!');
+        syncStaffData();
+      } catch (e) {
+        alert('Lỗi: ' + e.message);
+      }
+    }
+
+    function promptReassignSlot(orderId) {
+      const slot = prompt('Nhập mã ô trống muốn gán cho khách (Ví dụ: E1, D2, A3...):');
+      if (slot) {
+        resolveNoSlot(orderId, 'REASSIGN', slot.trim().toUpperCase());
+      }
+    }
+
+    function updateSignalRBadge(state) {
+      const el = document.getElementById('staffSignalRBadge');
+      if (!el) return;
+      el.className = 'signalr-badge ' + state;
+      if (state === 'connected') {
+        el.innerHTML = '<span class="signalr-dot"></span> Đã kết nối';
+      } else if (state === 'reconnecting') {
+        el.innerHTML = '<span class="signalr-dot"></span> Đang nối lại...';
+      } else {
+        el.innerHTML = '<span class="signalr-dot"></span> Mất kết nối';
+      }
+    }
+
+    function initSignalR() {
+      signalrConnection = new signalR.HubConnectionBuilder()
+        .withUrl('/hub/parking')
+        .withAutomaticReconnect([0, 1000, 2000, 5000, 10000, 30000])
+        .build();
+
+      signalrConnection.onreconnecting((error) => {
+        console.warn("SignalR đang kết nối lại...", error);
+        updateSignalRBadge('reconnecting');
+      });
+
+      signalrConnection.onreconnected((connectionId) => {
+        console.log("SignalR đã kết nối lại:", connectionId);
+        updateSignalRBadge('connected');
+        syncStaffData();
+      });
+
+      signalrConnection.onclose((error) => {
+        console.error("SignalR mất kết nối:", error);
+        updateSignalRBadge('disconnected');
+      });
+
+      signalrConnection.on('AlertRaised', (alertType, message) => {
+        appendAlertLog(alertType, message);
+        syncStaffData();
+      });
+
+      signalrConnection.on('BookingStatusChanged', () => {
+        syncStaffData();
+      });
+
+      signalrConnection.on('OrderStatusUpdated', () => {
+        syncStaffData();
+      });
+
+      signalrConnection.start()
+        .then(() => updateSignalRBadge('connected'))
+        .catch(err => {
+          console.error('SignalR Err:', err);
+          updateSignalRBadge('disconnected');
+        });
+    }
+
+    function appendAlertLog(type, message) {
+      const c = document.getElementById('alertsContainer');
+      const p4List = document.getElementById('p4AlertsList');
+      const timeStr = new Date().toLocaleTimeString('vi-VN');
+      const item = document.createElement('div');
+      item.style.padding = '10px 14px';
+      item.style.borderRadius = '8px';
+      item.style.background = '#fef2f2';
+      item.style.borderLeft = '4px solid #ef4444';
+      item.style.fontSize = '0.85rem';
+      item.innerHTML = `<strong>[${timeStr}] ${type}:</strong> ${message}`;
+      c.prepend(item);
+
+      // Thêm vào mục ưu tiên 4
+      if (p4List) {
+        const p4Item = item.cloneNode(true);
+        p4List.prepend(p4Item);
+      }
+    }
+
+    function formatDateTime(isoStr) {
+      if (!isoStr) return '---';
+      const d = new Date(isoStr);
+      return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')} ${d.getDate()}/${d.getMonth()+1}`;
+    }
+  </script>
+</body>
+</html>

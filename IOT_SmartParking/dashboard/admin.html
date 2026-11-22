@@ -1,0 +1,1296 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản Trị Bãi Đỗ Xe Thông Minh | Smart Parking IoT</title>
+  <link rel="stylesheet" href="style.css?v=20261122-1">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+  <style>
+    :root {
+      --color-free: #10b981;
+      --color-held: #f59e0b;
+      --color-booked: #3b82f6;
+      --color-booked-future: #06b6d4;
+      --color-guiding: #14b8a6;
+      --color-occupied: #ef4444;
+      --color-overlap: #eab308;
+      --color-unknown: #64748b;
+      --color-maintenance: #f97316;
+    }
+    * { box-sizing: border-box; }
+    body {
+      background: #f1f5f9;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      margin: 0;
+      color: #1e293b;
+    }
+    .admin-shell {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #102238;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 14px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .top-nav .brand-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .top-nav .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .badge-signalr {
+      padding: 5px 12px;
+      border-radius: 99px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: #064e3b;
+      color: #34d399;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge-signalr.offline {
+      background: #7f1d1d;
+      color: #f87171;
+    }
+    .badge-signalr.reconnecting {
+      background: #78350f;
+      color: #fde047;
+    }
+    .badge-signalr .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .btn-nav-action {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn-nav-action:hover { background: #1d4ed8; }
+    .btn-nav-sync {
+      background: #0ea5e9;
+    }
+    .btn-nav-sync:hover { background: #0284c7; }
+    .btn-logout {
+      background: transparent;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .btn-logout:hover { color: #f87171; border-color: #ef4444; }
+
+    /* STATS ROW */
+    .stat-cards-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    .stat-card span { font-size: 0.82rem; color: #64748b; display: block; margin-bottom: 4px; }
+    .stat-card strong { font-size: 1.6rem; color: #0f172a; }
+
+    /* SECTION CARD */
+    .section-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .section-title {
+      font-size: 1.15rem;
+      color: #1e293b;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    /* CHARTS GRID */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .chart-box {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+      display: flex;
+      flex-direction: column;
+    }
+    .chart-box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .chart-box-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .chart-svg-container {
+      width: 100%;
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* DEVICES GRID */
+    .devices-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .device-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px;
+      background: #f8fafc;
+      transition: all 0.2s;
+    }
+    .device-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border-color: #cbd5e1;
+    }
+    .device-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .device-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #0f172a;
+    }
+    .badge-status-online {
+      background: #dcfce7;
+      color: #15803d;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .badge-status-offline {
+      background: #fee2e2;
+      color: #b91c1c;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .device-meta {
+      font-size: 0.8rem;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    /* PARKING GRID */
+    .legend-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding: 10px 14px;
+      background: #f8fafc;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      font-size: 0.78rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #475569;
+    }
+    .legend-box {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+    .grid-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+    }
+    .row-wrapper {
+      display: grid;
+      grid-template-columns: 80px repeat(8, minmax(70px, 1fr));
+      gap: 8px;
+      align-items: center;
+      min-width: 680px;
+    }
+    .row-label {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #334155;
+      text-align: center;
+      padding: 8px 4px;
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+    .row-label.real-row {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px dashed #3b82f6;
+    }
+    .slot-cell {
+      aspect-ratio: 1.2;
+      border-radius: 8px;
+      padding: 6px 4px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      color: white;
+      font-weight: 700;
+      transition: all 0.15s ease;
+      position: relative;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+      user-select: none;
+      text-align: center;
+    }
+    .slot-cell:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.12);
+    }
+    .slot-id { font-size: 0.95rem; }
+    .slot-status { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.02em; }
+    .slot-distance { font-size: 0.68rem; opacity: 0.95; font-weight: 500; }
+
+    /* Slot Color Classes */
+    .status-FREE { background: var(--color-free); }
+    .status-HELD { background: var(--color-held); }
+    .status-BOOKED { background: var(--color-booked); }
+    .status-BOOKED_FUTURE { background: var(--color-booked-future); }
+    .status-GUIDING { background: var(--color-guiding); animation: pulse 1.5s infinite; }
+    .status-OCCUPIED { background: var(--color-occupied); }
+    .status-OVERLAP { background: var(--color-overlap); color: #1e293b; border: 2px dashed #dc2626; }
+    .status-UNKNOWN { background: var(--color-unknown); }
+    .status-MAINTENANCE { background: var(--color-maintenance); }
+
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(0.98); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* BARRIER & MANUAL CONTROL */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .control-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px;
+      background: #f8fafc;
+    }
+    .control-box h4 { margin: 0 0 10px 0; color: #1e293b; font-size: 0.95rem; }
+    .btn-group { display: flex; gap: 8px; }
+    .btn-action {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.82rem;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-open { background: #10b981; color: white; }
+    .btn-open:hover { background: #059669; }
+    .btn-close { background: #ef4444; color: white; }
+    .btn-close:hover { background: #dc2626; }
+
+    /* TABLE */
+    .table-responsive {
+      overflow-x: auto;
+      max-height: 420px;
+      -webkit-overflow-scrolling: touch;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+      text-align: left;
+    }
+    th, td {
+      padding: 9px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    th {
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    tr:hover td { background: #f8fafc; }
+
+    /* FILTERS */
+    .filter-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .input-filter {
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: #334155;
+    }
+
+    /* MODAL */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      place-items: center;
+      z-index: 99;
+      padding: 16px;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      max-width: 480px;
+      width: 100%;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    /* RESPONSIVE 360px - 768px */
+    @media (max-width: 1024px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 768px) {
+      .admin-shell { padding: 10px; }
+      .top-nav { flex-direction: column; align-items: flex-start; }
+      .top-nav .nav-actions { width: 100%; justify-content: space-between; }
+      .stat-cards-row { grid-template-columns: repeat(2, 1fr); }
+      .controls-split { grid-template-columns: 1fr !important; }
+    }
+    @media (max-width: 480px) {
+      .stat-cards-row { grid-template-columns: 1fr; }
+      .btn-nav-action { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-shell">
+    <!-- Top Nav -->
+    <header class="top-nav">
+      <div class="brand-title">
+        <span style="display:inline-grid;place-items:center;width:32px;height:32px;background:#2563eb;color:white;border-radius:8px;font-weight:800;">P</span>
+        Quản Trị Bãi Đỗ Xe Thông Minh (IoT)
+      </div>
+      <div class="nav-actions">
+        <div id="signalrStatus" class="badge-signalr">
+          <span class="dot"></span>
+          <span>Đang kết nối...</span>
+        </div>
+        <button class="btn-nav-action btn-nav-sync" onclick="syncAllData()" title="Đồng bộ lại toàn bộ dữ liệu từ thiết bị và máy chủ">
+          🔄 Đồng Bộ Lại
+        </button>
+        <div id="adminClock" style="font-weight:600;font-variant-numeric:tabular-nums;color:#cbd5e1;padding:0 4px;">--:--:--</div>
+        <a href="demo.html" class="btn-nav-action">⚙️ Bảng DEMO</a>
+        <button class="btn-logout" onclick="logout()">Đăng xuất</button>
+      </div>
+    </header>
+
+    <!-- Thống kê nhanh -->
+    <section class="stat-cards-row">
+      <div class="stat-card">
+        <span>Tổng vị trí bãi</span>
+        <strong id="statTotal">40</strong>
+      </div>
+      <div class="stat-card">
+        <span>Ô còn trống (FREE)</span>
+        <strong id="statFree" style="color:#10b981;">--</strong>
+      </div>
+      <div class="stat-card">
+        <span>Đang có xe đỗ (OCCUPIED)</span>
+        <strong id="statOccupied" style="color:#ef4444;">--</strong>
+      </div>
+      <div class="stat-card">
+        <span>Đang giữ / Đã đặt</span>
+        <strong id="statBooked" style="color:#3b82f6;">--</strong>
+      </div>
+      <div class="stat-card">
+        <span>Tỷ lệ lấp đầy</span>
+        <strong id="statOccupancyRate" style="color:#f59e0b;">0%</strong>
+      </div>
+    </section>
+
+    <!-- BIỂU ĐỒ THỐNG KÊ (SVG TỰ VẼ) -->
+    <section class="charts-grid">
+      <!-- 1. Doanh thu theo ngày -->
+      <div class="chart-box">
+        <div class="chart-box-header">
+          <div class="chart-box-title">📈 Doanh Thu Theo Ngày (VNĐ)</div>
+          <button class="btn-action" style="background:#f1f5f9;color:#0284c7;padding:4px 10px;font-size:0.78rem;" onclick="exportRevenueCsv()">
+            📥 Xuất CSV
+          </button>
+        </div>
+        <div class="chart-svg-container" id="revenueChartContainer">
+          <svg id="revenueChartSvg" width="100%" height="210" style="overflow:visible;"></svg>
+        </div>
+      </div>
+
+      <!-- 2. Tỷ lệ lấp đầy -->
+      <div class="chart-box">
+        <div class="chart-box-header">
+          <div class="chart-box-title">🍩 Tỷ Lệ Lấp Đầy Hiện Tại</div>
+          <span id="donutPercentageText" style="font-size:0.85rem;font-weight:700;color:#f59e0b;">--%</span>
+        </div>
+        <div class="chart-svg-container" id="occupancyChartContainer">
+          <svg id="occupancyChartSvg" width="100%" height="210" viewBox="0 0 200 200"></svg>
+        </div>
+      </div>
+
+      <!-- 3. Số đơn theo trạng thái -->
+      <div class="chart-box">
+        <div class="chart-box-header">
+          <div class="chart-box-title">📊 Số Đơn Theo Trạng Thái</div>
+          <span id="totalOrdersCount" style="font-size:0.82rem;color:#64748b;">Tổng: --</span>
+        </div>
+        <div class="chart-svg-container" id="orderStatusChartContainer" style="align-items:flex-start;justify-content:flex-start;">
+          <div id="orderStatusList" style="width:100%;display:flex;flex-direction:column;gap:8px;padding-top:4px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sơ đồ 40 ô Realtime -->
+    <section class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">
+          <span>🅿️ Sơ Đồ 40 Ô Đỗ Xe Thời Gian Thực</span>
+        </h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-action" style="background:#e2e8f0;color:#334155;padding:6px 12px;" onclick="loadSlots()">🔄 Tải lại sơ đồ</button>
+        </div>
+      </div>
+
+      <!-- Chú giải trạng thái -->
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-box" style="background:var(--color-free);"></div> FREE: Ô trống</div>
+        <div class="legend-item"><div class="legend-box" style="background:var(--color-held);"></div> HELD: Giữ chờ thanh toán</div>
+        <div class="legend-item"><div class="legend-box" style="background:var(--color-booked);"></div> BOOKED: Đã thanh toán</div>
+        <div class="legend-item"><div class="legend-box" style="background:var(--color-booked-future);"></div> BOOKED_FUTURE: Đã đặt trước</div>
+        <div class="legend-item"><div class="legend-box" style="background:var(--color-guiding);"></div> GUIDING: Đang dẫn đường</div>
+        <div class="legend-item"><div class="legend-box" style="background:var(--color-occupied);"></div> OCCUPIED: Đang đỗ xe</div>
+        <div class="legend-item"><div class="legend-box" style="background:var(--color-overlap);border:1px dashed red;"></div> OVERLAP: Đỗ lấn vạch</div>
+        <div class="legend-item"><div class="legend-box" style="background:var(--color-unknown);"></div> UNKNOWN: Mất kết nối (LWT)</div>
+        <div class="legend-item"><div class="legend-box" style="background:var(--color-maintenance);"></div> MAINTENANCE: Bảo trì</div>
+      </div>
+
+      <!-- Grid sơ đồ -->
+      <div class="grid-container" id="slotsGrid">
+        <!-- Javascript renders rows A, B, C, D, E -->
+      </div>
+    </section>
+
+    <!-- Trạng Thái 6 Board Vi Điều Khiển IoT -->
+    <section class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">
+          <span>📡 Trạng Thái Hệ Thống Vi Điều Khiển (6 Board ESP32)</span>
+        </h2>
+        <button class="btn-action" style="background:#e2e8f0;color:#334155;padding:6px 12px;" onclick="loadDevices()">
+          🔄 Làm mới thiết bị
+        </button>
+      </div>
+      <div class="devices-grid" id="devicesGrid">
+        <div style="color:#64748b;padding:12px;">Đang tải danh sách thiết bị vi điều khiển...</div>
+      </div>
+    </section>
+
+    <!-- Điều khiển Barie & Cảnh Báo -->
+    <div class="controls-split" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+      <!-- Điều khiển barie -->
+      <section class="section-card" style="margin-bottom:0;">
+        <h3 class="section-title" style="margin-bottom:14px;">🚧 Điều Khiển Barie Cổng Thủ Công</h3>
+        <div class="controls-grid">
+          <div class="control-box">
+            <h4>Cổng VÀO (Gate IN)</h4>
+            <div class="btn-group">
+              <button class="btn-action btn-open" onclick="controlBarrier('IN', 'OPEN')">Mở Barie Vào</button>
+              <button class="btn-action btn-close" onclick="controlBarrier('IN', 'CLOSE')">Đóng Barie Vào</button>
+            </div>
+          </div>
+          <div class="control-box">
+            <h4>Cổng RA (Gate OUT)</h4>
+            <div class="btn-group">
+              <button class="btn-action btn-open" onclick="controlBarrier('OUT', 'OPEN')">Mở Barie Ra</button>
+              <button class="btn-action btn-close" onclick="controlBarrier('OUT', 'CLOSE')">Đóng Barie Ra</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cảnh báo & Alert -->
+      <section class="section-card" style="margin-bottom:0;">
+        <h3 class="section-title" style="margin-bottom:14px;">🔔 Cảnh Báo Thời Gian Thực (Alerts)</h3>
+        <div id="alertBox" style="min-height:110px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;overflow-y:auto;max-height:150px;">
+          <div style="color:#64748b;font-size:0.85rem;text-align:center;padding:15px;">Chưa có cảnh báo bất thường mới nào.</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Quản lý Đơn Đặt Chỗ -->
+    <section class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">📋 Danh Sách Đơn Đặt Chỗ Gần Đây</h2>
+        <div class="filter-bar">
+          <label style="font-size:0.85rem;color:#475569;">Trạng thái:</label>
+          <select id="bookingFilter" class="input-filter" onchange="loadBookings()">
+            <option value="ALL">Tất cả</option>
+            <option value="PENDING_PAYMENT">Chờ thanh toán (PENDING_PAYMENT)</option>
+            <option value="PAID">Đã thanh toán (PAID)</option>
+            <option value="ENTERED">Đã vào bãi (ENTERED)</option>
+            <option value="PARKED">Đang đỗ (PARKED)</option>
+            <option value="OVERSTAY">Quá giờ đỗ (OVERSTAY)</option>
+            <option value="COMPLETED">Hoàn tất (COMPLETED)</option>
+            <option value="EXPIRED">Hết hạn thanh toán (EXPIRED)</option>
+            <option value="NO_SHOW">Vắng mặt (NO_SHOW)</option>
+            <option value="ABANDONED">Vào rồi ra (ABANDONED)</option>
+            <option value="CANCELLED">Đã hủy (CANCELLED)</option>
+          </select>
+          <button class="btn-action" style="background:#e2e8f0;color:#334155;padding:6px 12px;" onclick="loadBookings()">Lọc</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Mã Đơn</th>
+              <th>Khách Hàng</th>
+              <th>Vị Trí Ô</th>
+              <th>Biển Số Xe</th>
+              <th>Giờ Hẹn</th>
+              <th>Tổng Tiền</th>
+              <th>Mã Quét Vào</th>
+              <th>Trạng Thái</th>
+            </tr>
+          </thead>
+          <tbody id="bookingsTableBody">
+            <tr><td colspan="8" style="text-align:center;color:#94a3b8;">Đang tải dữ liệu đơn...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Nhật ký Hệ thống Live -->
+    <section class="section-card">
+      <div class="section-header">
+        <h2 class="section-title">📜 Nhật Ký Hệ Thống Trực Tiếp (System Logs)</h2>
+        <div class="filter-bar">
+          <label style="font-size:0.82rem;color:#475569;">Mức độ:</label>
+          <select id="logLevelFilter" class="input-filter" onchange="loadLogs()">
+            <option value="ALL">Tất cả</option>
+            <option value="INFO">Thông tin (INFO)</option>
+            <option value="WARNING">Cảnh báo (WARNING)</option>
+            <option value="ERROR">Lỗi (ERROR)</option>
+          </select>
+
+          <label style="font-size:0.82rem;color:#475569;">Từ ngày:</label>
+          <input type="date" id="logFromDate" class="input-filter" onchange="loadLogs()">
+
+          <label style="font-size:0.82rem;color:#475569;">Đến ngày:</label>
+          <input type="date" id="logToDate" class="input-filter" onchange="loadLogs()">
+
+          <button class="btn-action" style="background:#e2e8f0;color:#334155;padding:6px 10px;" onclick="loadLogs()">Lọc</button>
+          <button class="btn-action" style="background:#fee2e2;color:#dc2626;padding:6px 10px;" onclick="clearLogs()">Xóa Nhật Ký</button>
+        </div>
+      </div>
+      <div class="table-responsive" style="max-height:300px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:140px;">Thời Gian</th>
+              <th style="width:140px;">Sự Kiện</th>
+              <th style="width:90px;">Nguồn</th>
+              <th style="width:90px;">Mức Độ</th>
+              <th>Nội Dung</th>
+            </tr>
+          </thead>
+          <tbody id="logsTableBody">
+            <tr><td colspan="5" style="text-align:center;color:#94a3b8;">Đang tải nhật ký...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal Chi Tiết Ô Đỗ -->
+  <div id="slotModal" class="modal-backdrop" onclick="closeSlotModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <h3 style="margin-top:0;color:#0f172a;" id="modalSlotTitle">Chi tiết ô đỗ</h3>
+      <div id="modalSlotBody" style="font-size:0.92rem;line-height:1.6;color:#334155;"></div>
+      <div style="margin-top:20px;text-align:right;">
+        <button class="btn-action" style="background:#e2e8f0;color:#334155;" onclick="closeSlotModal()">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let slotsData = [];
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = 'index.html';
+    }
+
+    // Kết nối SignalR Realtime với tự động kết nối lại
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl("/hub/parking")
+      .withAutomaticReconnect([0, 1000, 2000, 5000, 10000, 30000])
+      .build();
+
+    function updateSignalRBadge(state) {
+      const el = document.getElementById('signalrStatus');
+      if (!el) return;
+      el.classList.remove('offline', 'reconnecting');
+      if (state === 'connected') {
+        el.innerHTML = '<span class="dot"></span><span>Đã kết nối</span>';
+      } else if (state === 'reconnecting') {
+        el.classList.add('reconnecting');
+        el.innerHTML = '<span class="dot"></span><span>Đang nối lại...</span>';
+      } else {
+        el.classList.add('offline');
+        el.innerHTML = '<span class="dot"></span><span>Mất kết nối</span>';
+      }
+    }
+
+    connection.onreconnecting((error) => {
+      console.warn("SignalR đang kết nối lại...", error);
+      updateSignalRBadge('reconnecting');
+    });
+
+    connection.onreconnected(async (connectionId) => {
+      console.log("SignalR đã kết nối lại:", connectionId);
+      updateSignalRBadge('connected');
+      await syncAllData();
+    });
+
+    connection.onclose((error) => {
+      console.error("SignalR mất kết nối:", error);
+      updateSignalRBadge('disconnected');
+    });
+
+    connection.on("SlotUpdated", (slot) => {
+      loadSlots();
+      loadOccupancyChart();
+    });
+
+    connection.on("SlotsReload", () => {
+      syncAllData();
+    });
+
+    connection.on("TimeUpdated", (timeDto) => {
+      document.getElementById('adminClock').textContent = timeDto.display;
+    });
+
+    connection.on("SystemLog", (log) => {
+      prependLog(log);
+    });
+
+    connection.on("Alert", (alert) => {
+      addAlert(alert);
+    });
+
+    async function startSignalR() {
+      try {
+        await connection.start();
+        updateSignalRBadge('connected');
+      } catch (err) {
+        updateSignalRBadge('disconnected');
+        setTimeout(startSignalR, 4000);
+      }
+    }
+
+    // Đồng bộ lại toàn bộ dữ liệu hệ thống
+    async function syncAllData() {
+      try {
+        await Promise.all([
+          loadSlots(),
+          loadBookings(),
+          loadLogs(),
+          loadDevices(),
+          loadRevenueChart(),
+          loadOccupancyChart(),
+          loadOrderStatusChart()
+        ]);
+      } catch (e) {
+        console.error("Lỗi khi đồng bộ lại:", e);
+      }
+    }
+
+    // Tải sơ đồ 40 ô đỗ xe
+    async function loadSlots() {
+      try {
+        const res = await fetch('/api/slots');
+        if (!res.ok) return;
+        slotsData = await res.json();
+        renderSlotsGrid(slotsData);
+        updateStats(slotsData);
+      } catch (e) {
+        console.error("Lỗi tải sơ đồ ô:", e);
+      }
+    }
+
+    function renderSlotsGrid(slots) {
+      const container = document.getElementById('slotsGrid');
+      container.innerHTML = '';
+
+      const rows = ['A', 'B', 'C', 'D', 'E'];
+      rows.forEach(r => {
+        const rowWrapper = document.createElement('div');
+        rowWrapper.className = 'row-wrapper';
+
+        const label = document.createElement('div');
+        label.className = 'row-label' + (r === 'E' ? ' real-row' : '');
+        label.innerHTML = `<strong>Hàng ${r}</strong><div style="font-size:0.65rem;font-weight:400;">${r === 'E' ? 'HC-SR04 Thật' : 'Ô ảo A-D'}</div>`;
+        rowWrapper.appendChild(label);
+
+        for (let c = 1; c <= 8; c++) {
+          const slotId = `${r}${c}`;
+          const s = slots.find(x => x.maViTri === slotId) || {
+            maViTri: slotId,
+            trangThai: 'FREE',
+            khoangCachCm: 200
+          };
+
+          const cell = document.createElement('div');
+          cell.className = `slot-cell status-${s.trangThai}`;
+          cell.onclick = () => showSlotDetails(s);
+
+          cell.innerHTML = `
+            <div class="slot-id">${s.maViTri}</div>
+            <div class="slot-status">${s.trangThai}</div>
+            <div class="slot-distance">${r === 'E' ? `${s.khoangCachCm ?? 200}cm` : (s.bienSo || '---')}</div>
+          `;
+          rowWrapper.appendChild(cell);
+        }
+
+        container.appendChild(rowWrapper);
+      });
+    }
+
+    function updateStats(slots) {
+      const total = slots.length;
+      const free = slots.filter(s => s.trangThai === 'FREE').length;
+      const occupied = slots.filter(s => s.trangThai === 'OCCUPIED' || s.trangThai === 'OVERLAP').length;
+      const booked = slots.filter(s => ['HELD', 'BOOKED', 'BOOKED_FUTURE', 'GUIDING'].includes(s.trangThai)).length;
+      const rate = total > 0 ? Math.round(((occupied + booked) / total) * 100) : 0;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statFree').textContent = free;
+      document.getElementById('statOccupied').textContent = occupied;
+      document.getElementById('statBooked').textContent = booked;
+      document.getElementById('statOccupancyRate').textContent = `${rate}%`;
+    }
+
+    function showSlotDetails(s) {
+      document.getElementById('modalSlotTitle').textContent = `Chi tiết ô đỗ ${s.maViTri} (${s.laViTriAo ? 'Ô ảo A-D' : 'Cảm biến thật ESP32 Row E'})`;
+      let bookingHtml = '';
+      if (s.maDon) {
+        bookingHtml = `
+          <div style="margin-top:12px;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+            <strong>Thông tin đơn đặt chỗ:</strong><br>
+            • Mã đơn: <b>#${s.maDon}</b><br>
+            • Biển số xe: <b>${s.bienSo || 'Chưa cập nhật'}</b><br>
+            • Trạng thái đơn: <b>${s.trangThaiDon || '---'}</b>
+          </div>
+        `;
+      }
+
+      document.getElementById('modalSlotBody').innerHTML = `
+        <p>• Trạng thái: <b style="color:var(--color-${s.trangThai.toLowerCase()});">${s.trangThai}</b></p>
+        <p>• Khoảng cách cảm biến: <b>${s.khoangCachCm ?? 200} cm</b></p>
+        <p>• Cập nhật lần cuối: <b>${s.lanCapNhat ? new Date(s.lanCapNhat).toLocaleTimeString('vi-VN') : '---'}</b></p>
+        ${bookingHtml}
+      `;
+      document.getElementById('slotModal').style.display = 'grid';
+    }
+
+    function closeSlotModal() {
+      document.getElementById('slotModal').style.display = 'none';
+    }
+
+    // Tải thông tin 6 board vi điều khiển
+    async function loadDevices() {
+      const container = document.getElementById('devicesGrid');
+      try {
+        const res = await fetch('/api/devices');
+        if (!res.ok) return;
+        const devices = await res.json();
+
+        if (!devices || devices.length === 0) {
+          container.innerHTML = '<div style="color:#64748b;padding:12px;">Chưa tìm thấy bản ghi thiết bị nào.</div>';
+          return;
+        }
+
+        container.innerHTML = devices.map(d => {
+          const isOnline = d.trangThai === 'ONLINE';
+          const updateTime = d.lanCapNhat ? new Date(d.lanCapNhat).toLocaleTimeString('vi-VN') : '---';
+          return `
+            <div class="device-card">
+              <div class="device-card-header">
+                <span class="device-name">${d.maThietBi}</span>
+                <span class="${isOnline ? 'badge-status-online' : 'badge-status-offline'}">
+                  ${isOnline ? '● ONLINE' : '○ OFFLINE'}
+                </span>
+              </div>
+              <div class="device-meta">
+                <div><b>Vai trò:</b> ${d.loai}</div>
+                <div><b>Phụ trách:</b> ${d.cacOPHuTrach}</div>
+                <div><b>Đoạn LED:</b> Offset ${d.pixelOffset}, Count ${d.pixelCount}</div>
+                <div style="font-size:0.75rem;color:#64748b;margin-top:4px;">Cập nhật: ${updateTime}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        container.innerHTML = '<div style="color:#ef4444;padding:12px;">Lỗi khi tải trạng thái thiết bị.</div>';
+      }
+    }
+
+    // 1. Biểu đồ doanh thu theo ngày (SVG tự vẽ)
+    async function loadRevenueChart() {
+      try {
+        const res = await fetch('/api/thong-ke/doanh-thu-theo-ngay');
+        if (!res.ok) return;
+        const data = await res.json();
+        renderRevenueSvg(data.chiTiet || []);
+      } catch (e) {
+        console.error("Lỗi vẽ biểu đồ doanh thu:", e);
+      }
+    }
+
+    function renderRevenueSvg(items) {
+      const svg = document.getElementById('revenueChartSvg');
+      svg.innerHTML = '';
+      if (!items || items.length === 0) {
+        svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#94a3b8" font-size="12">Chưa có dữ liệu doanh thu</text>';
+        return;
+      }
+
+      const w = svg.clientWidth || 360;
+      const h = 210;
+      const padLeft = 40;
+      const padBottom = 30;
+      const padTop = 20;
+      const padRight = 15;
+
+      const chartW = w - padLeft - padRight;
+      const chartH = h - padTop - padBottom;
+
+      const maxVal = Math.max(...items.map(x => x.doanhThu), 50000);
+      const barWidth = Math.min(36, Math.max(16, (chartW / items.length) * 0.6));
+
+      // Trục hoành
+      const axisLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      axisLine.setAttribute('x1', padLeft);
+      axisLine.setAttribute('y1', padTop + chartH);
+      axisLine.setAttribute('x2', padLeft + chartW);
+      axisLine.setAttribute('y2', padTop + chartH);
+      axisLine.setAttribute('stroke', '#cbd5e1');
+      axisLine.setAttribute('stroke-width', '1');
+      svg.appendChild(axisLine);
+
+      items.forEach((item, idx) => {
+        const xCenter = padLeft + (chartW / items.length) * (idx + 0.5);
+        const barH = (item.doanhThu / maxVal) * (chartH - 20);
+        const barY = padTop + chartH - barH;
+
+        // Cột bar
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', xCenter - barWidth / 2);
+        rect.setAttribute('y', barY);
+        rect.setAttribute('width', barWidth);
+        rect.setAttribute('height', Math.max(2, barH));
+        rect.setAttribute('rx', '4');
+        rect.setAttribute('fill', '#3b82f6');
+        rect.innerHTML = `<title>${item.ngayLabel}: ${(item.doanhThu).toLocaleString('vi-VN')} đ (${item.soLuotGuiXe} lượt)</title>`;
+        svg.appendChild(rect);
+
+        // Nhãn ngày
+        const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        labelText.setAttribute('x', xCenter);
+        labelText.setAttribute('y', padTop + chartH + 18);
+        labelText.setAttribute('text-anchor', 'middle');
+        labelText.setAttribute('fill', '#64748b');
+        labelText.setAttribute('font-size', '10');
+        labelText.textContent = item.ngayLabel;
+        svg.appendChild(labelText);
+
+        // Giá trị trên đầu cột nếu > 0
+        if (item.doanhThu > 0) {
+          const valText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          valText.setAttribute('x', xCenter);
+          valText.setAttribute('y', Math.max(padTop + 10, barY - 4));
+          valText.setAttribute('text-anchor', 'middle');
+          valText.setAttribute('fill', '#1e40af');
+          valText.setAttribute('font-size', '9');
+          valText.setAttribute('font-weight', '700');
+          valText.textContent = item.doanhThu >= 1000 ? `${Math.round(item.doanhThu / 1000)}k` : `${item.doanhThu}`;
+          svg.appendChild(valText);
+        }
+      });
+    }
+
+    // 2. Biểu đồ tỷ lệ lấp đầy (SVG Donut tự vẽ)
+    async function loadOccupancyChart() {
+      try {
+        const res = await fetch('/api/thong-ke/ty-le-lap-day');
+        if (!res.ok) return;
+        const d = await res.json();
+        document.getElementById('donutPercentageText').textContent = `${d.tyLePhanTram}% Lấp Đầy`;
+        renderDonutSvg(d);
+      } catch (e) {
+        console.error("Lỗi vẽ biểu đồ lấp đầy:", e);
+      }
+    }
+
+    function renderDonutSvg(d) {
+      const svg = document.getElementById('occupancyChartSvg');
+      svg.innerHTML = '';
+
+      const cx = 100, cy = 90, r = 60, strokeW = 20;
+      const circumference = 2 * Math.PI * r;
+
+      const total = d.tongSo || 40;
+      const occRatio = (d.coXe || 0) / total;
+      const bookedRatio = (d.daDat || 0) / total;
+      const freeRatio = (d.trong || 0) / total;
+
+      const occLen = occRatio * circumference;
+      const bookedLen = bookedRatio * circumference;
+      const freeLen = freeRatio * circumference;
+
+      // Nền vòng tròn (màu xám nhạt)
+      const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      bgCircle.setAttribute('cx', cx);
+      bgCircle.setAttribute('cy', cy);
+      bgCircle.setAttribute('r', r);
+      bgCircle.setAttribute('fill', 'none');
+      bgCircle.setAttribute('stroke', '#e2e8f0');
+      bgCircle.setAttribute('stroke-width', strokeW);
+      svg.appendChild(bgCircle);
+
+      // Cung Ô trống (Xanh lá)
+      let offset = 0;
+      if (freeLen > 0) {
+        const freeC = createDonutArc(cx, cy, r, strokeW, freeLen, circumference, offset, '#10b981');
+        svg.appendChild(freeC);
+        offset -= freeLen;
+      }
+
+      // Cung Đã đặt/giữ (Xanh dương)
+      if (bookedLen > 0) {
+        const bookedC = createDonutArc(cx, cy, r, strokeW, bookedLen, circumference, offset, '#3b82f6');
+        svg.appendChild(bookedC);
+        offset -= bookedLen;
+      }
+
+      // Cung Có xe (Đỏ)
+      if (occLen > 0) {
+        const occC = createDonutArc(cx, cy, r, strokeW, occLen, circumference, offset, '#ef4444');
+        svg.appendChild(occC);
+      }
+
+      // Chữ ở tâm
+      const textPct = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      textPct.setAttribute('x', cx);
+      textPct.setAttribute('y', cy + 4);
+      textPct.setAttribute('text-anchor', 'middle');
+      textPct.setAttribute('font-size', '18');
+      textPct.setAttribute('font-weight', '800');
+      textPct.setAttribute('fill', '#0f172a');
+      textPct.textContent = `${d.tyLePhanTram}%`;
+      svg.appendChild(textPct);
+
+      const textSub = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      textSub.setAttribute('x', cx);
+      textSub.setAttribute('y', cy + 18);
+      textSub.setAttribute('text-anchor', 'middle');
+      textSub.setAttribute('font-size', '9');
+      textSub.setAttribute('fill', '#64748b');
+      textSub.textContent = `${d.coXe}/${total} ô có xe`;
+      svg.appendChild(textSub);
+
+      // Chú thích nhỏ bên dưới SVG
+      const legendText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      legendText.setAttribute('x', cx);
+      legendText.setAttribute('y', 180);
+      legendText.setAttribute('text-anchor', 'middle');
+      legendText.setAttribute('font-size', '10');
+      legendText.setAttribute('fill', '#475569');
+      legendText.textContent = `Trống: ${d.trong} | Đặt: ${d.daDat} | Đỗ: ${d.coXe}`;
+      svg.appendChild(legendText);
+    }
+
+    function createDonutArc(cx, cy, r, w, dashLen, totalLen, offset, color) {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', cx);
+      circle.setAttribute('cy', cy);
+      circle.setAttribute('r', r);
+      circle.setAttribute('fill', 'none');
+      circle.setAttribute('stroke', color);
+      circle.setAttribute('stroke-width', w);
+      circle.setAttribute('stroke-dasharray', `${dashLen} ${totalLen}`);
+      circle.setAttribute('stroke-dashoffset', offset);
+      circle.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
+      return circle;
+    }
+
+    // 3. Biểu đồ số đơn theo trạng thái (Thanh tiến trình trực quan)
+    async function loadOrderStatusChart() {
+      try {
+        const res = await fetch('/api/thong-ke/don-theo-trang-thai');
+        if (!res.ok) return;
+        const list = await res.json();
+        renderOrderStatuses(list);
+      } catch (e) {
+        console.error("Lỗi tải số đơn theo trạng thái:", e);
+      }
+    }
+
+    function renderOrderStatuses(items) {
+      const container = document.getElementById('orderStatusList');
+      const totalCountEl = document.getElementById('totalOrdersCount');
+      if (!items || items.length === 0) {
+        container.innerHTML = '<div style="color:#94a3b8;font-size:0.85rem;">Chưa có đơn đặt chỗ nào.</div>';
+        totalCountEl.textContent = 'Tổng: 0';
+        return;
+      }
+
+      const total = items.reduce((acc, cur) => acc + cur.soLuong, 0);
+      totalCountEl.textContent = `Tổng: ${total} đơn`;
+
+      const statusMap = {
+        COMPLETED: { label: 'Hoàn tất', color: '#10b981' },
+        PARKED: { label: 'Đang đỗ trong ô', color: '#ef4444' },
+        ENTERED: { label: 'Đã qua cổng vào', color: '#8b5cf6' },
+        PAID: { label: 'Đã thanh toán', color: '#3b82f6' },
+        PENDING_PAYMENT: { label: 'Chờ thanh toán', color: '#f59e0b' },
+        OVERSTAY: { label: 'Quá hạn đỗ (Phạt)', color: '#ea580c' },
+        NO_SHOW: { label: 'Vắng mặt', color: '#64748b' },
+        ABANDONED: { label: 'Vào rồi ra ngay', color: '#94a3b8' },
+        CANCELLED: { label: 'Đã hủy', color: '#cbd5e1' }
+      };
+
+      container.innerHTML = items.map(item => {
+        const cfg = statusMap[item.trangThai] || { label: item.trangThai, color: '#3b82f6' };
+        const pct = total > 0 ? Math.round((item.soLuong / total) * 100) : 0;
+        return `
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:3px;">
+              <span><b>${cfg.label}</b> <span style="color:#64748b;">(${item.trangThai})</span></span>
+              <span><b>${item.soLuong}</b> (${pct}%)</span>
+            </div>
+            <div style="height:7px;background:#e2e8f0;border-radius:99px;overflow:hidden;">
+              <div style="width:${pct}%;height:100%;background:${cfg.color};border-radius:99px;"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Xuất file CSV doanh thu
+    function exportRevenueCsv() {
+      window.location.href = '/api/thong-ke/xuat-csv-doanh-thu';
+    }
+
+    // Điều khiển barie
+    async function controlBarrier(gate, action) {
+      if (!confirm(`Bạn có chắc chắn muốn phát lệnh ${action} barie cổng ${gate}?`)) return;
+
+      try {
+        const res = await fetch('/api/gate/barrier/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gate, action })
+        });
+        const data = await res.json();
+        alert(data.message || 'Đã gửi lệnh.');
+      } catch (e) {
+        alert('Lỗi điều khiển barie: ' + e.message);
+      }
+    }
+
+    // Tải danh sách đơn đặt chỗ
+    async function loadBookings() {
+      const status = document.getElementById('bookingFilter').value;
+      const tbody = document.getElementById('bookingsTableBody');
+
+      try {
+        const res = await fetch(`/api/bookings/admin/all?status=${status}`);
+        if (!res.ok) return;
+        const list = await res.json();
+
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;">Không có đơn hàng nào khớp với điều kiện lọc.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = list.map(b => `
+          <tr>
+            <td><strong>#${b.maDon}</strong></td>
+            <td>${b.khachHang || b.tenDangNhap}</td>
+            <td><span style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:6px;font-weight:700;">${b.viTris.join(', ')}</span></td>
+            <td><strong>${b.bienSos.join(', ')}</strong></td>
+            <td>${new Date(b.thoiGianHenT).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})} ${new Date(b.thoiGianHenT).toLocaleDateString('vi-VN')}</td>
+            <td>${b.tongTien.toLocaleString('vi-VN')} đ</td>
+            <td><code>${b.entryCode || '---'}</code></td>
+            <td><span style="font-size:0.75rem;padding:2px 8px;border-radius:99px;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-weight:600;">${b.trangThai}</span></td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#ef4444;">Lỗi tải danh sách đơn.</td></tr>';
+      }
+    }
+
+    // Tải danh sách nhật ký hệ thống (hỗ trợ lọc mức độ và thời gian)
+    async function loadLogs() {
+      const level = document.getElementById('logLevelFilter').value;
+      const fromDate = document.getElementById('logFromDate').value;
+      const toDate = document.getElementById('logToDate').value;
+      const tbody = document.getElementById('logsTableBody');
+
+      try {
+        let url = `/api/system/logs?limit=50&level=${encodeURIComponent(level)}`;
+        if (fromDate) url += `&fromDate=${encodeURIComponent(fromDate)}`;
+        if (toDate) url += `&toDate=${encodeURIComponent(toDate)}`;
+
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const logs = await res.json();
+
+        if (logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">Chưa có nhật ký nào khớp điều kiện lọc.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = logs.map(l => `
+          <tr>
+            <td><small style="color:#64748b;">${l.time}</small></td>
+            <td><strong>${l.eventType}</strong></td>
+            <td><span style="font-size:0.75rem;padding:2px 6px;border-radius:4px;background:#e2e8f0;">${l.source}</span></td>
+            <td><span style="font-size:0.75rem;font-weight:700;color:${l.level==='ERROR'?'#dc2626':l.level==='WARNING'?'#d97706':'#16a34a'}">${l.level}</span></td>
+            <td>${l.content}</td>
+          </tr>
+        `).join('');
+      } catch (e) {}
+    }
+
+    function prependLog(log) {
+      const tbody = document.getElementById('logsTableBody');
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><small style="color:#64748b;">${log.time}</small></td>
+        <td><strong>${log.eventType}</strong></td>
+        <td><span style="font-size:0.75rem;padding:2px 6px;border-radius:4px;background:#e2e8f0;">${log.source}</span></td>
+        <td><span style="font-size:0.75rem;font-weight:700;color:${log.level==='ERROR'?'#dc2626':log.level==='WARNING'?'#d97706':'#16a34a'}">${log.level}</span></td>
+        <td>${log.message}</td>
+      `;
+      tbody.insertBefore(row, tbody.firstChild);
+    }
+
+    function addAlert(alert) {
+      const box = document.getElementById('alertBox');
+      const div = document.createElement('div');
+      div.style.cssText = "margin-bottom:8px;padding:8px 12px;border-radius:8px;background:#fef2f2;border:1px solid #fee2e2;color:#b91c1c;font-size:0.85rem;display:flex;justify-content:space-between;";
+      div.innerHTML = `<span>⚠️ <b>${alert.alertType}:</b> ${alert.message}</span> <small style="color:#991b1b;">${alert.time}</small>`;
+      box.insertBefore(div, box.firstChild);
+    }
+
+    async function clearLogs() {
+      if (!confirm("Bạn có chắc chắn muốn xóa toàn bộ nhật ký hệ thống?")) return;
+      await fetch('/api/system/logs', { method: 'DELETE' });
+      document.getElementById('logsTableBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">Nhật ký đã được xóa rỗng.</td></tr>';
+    }
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('adminClock').textContent = now.toLocaleTimeString('vi-VN');
+    }
+    setInterval(updateClock, 1000);
+
+    // Khởi tạo trang
+    syncAllData();
+    startSignalR();
+  </script>
+</body>
+</html>

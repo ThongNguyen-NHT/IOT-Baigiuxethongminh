@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "author": "IoT Smart Parking Team",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": -50,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensor_gate_in",
+      "top": -220,
+      "left": 300,
+      "attrs": { "distance": "200" }
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "barrier_in",
+      "top": -60,
+      "left": 300,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "barrier_out",
+      "top": 80,
+      "left": 300,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_gate_out",
+      "top": 200,
+      "left": 250,
+      "attrs": { "color": "orange" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_cp1",
+      "top": 200,
+      "left": 350,
+      "attrs": { "color": "blue" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_cp2",
+      "top": 200,
+      "left": 450,
+      "attrs": { "color": "blue" }
+    },
+    {
+      "type": "wokwi-lcd2004",
+      "id": "statusDisplay",
+      "top": -150,
+      "left": -350,
+      "attrs": {
+        "pins": "i2c",
+        "i2cAddress": "0x27",
+        "background": "blue",
+        "color": "white"
+      }
+    }
+  ],
+  "connections": [
+    [ "esp:23", "sensor_gate_in:TRIG", "green", [] ],
+    [ "esp:34", "sensor_gate_in:ECHO", "blue", [] ],
+    [ "esp:VIN", "sensor_gate_in:VCC", "red", [] ],
+    [ "esp:GND.1", "sensor_gate_in:GND", "black", [] ],
+
+    [ "esp:4", "barrier_in:PWM", "orange", [] ],
+    [ "esp:VIN", "barrier_in:V+", "red", [] ],
+    [ "esp:GND.1", "barrier_in:GND", "black", [] ],
+
+    [ "esp:16", "barrier_out:PWM", "orange", [] ],
+    [ "esp:VIN", "barrier_out:V+", "red", [] ],
+    [ "esp:GND.1", "barrier_out:GND", "black", [] ],
+
+    [ "esp:18", "btn_gate_out:1.l", "orange", [] ],
+    [ "esp:GND.1", "btn_gate_out:2.l", "black", [] ],
+
+    [ "esp:19", "btn_cp1:1.l", "blue", [] ],
+    [ "esp:GND.1", "btn_cp1:2.l", "black", [] ],
+
+    [ "esp:32", "btn_cp2:1.l", "blue", [] ],
+    [ "esp:GND.1", "btn_cp2:2.l", "black", [] ],
+
+    [ "esp:21", "statusDisplay:SDA", "green", [] ],
+    [ "esp:22", "statusDisplay:SCL", "yellow", [] ],
+    [ "esp:VIN", "statusDisplay:VCC", "red", [] ],
+    [ "esp:GND.1", "statusDisplay:GND", "black", [] ]
+  ],
+  "serialMonitor": {
+    "display": "terminal",
+    "convertEol": true
+  },
+  "dependencies": {}
+}

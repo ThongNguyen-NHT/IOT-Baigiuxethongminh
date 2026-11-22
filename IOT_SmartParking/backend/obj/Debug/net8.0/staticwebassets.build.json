@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "40YM4ucpuv1O9xkWlDyUddn0d+X6UJ1HRr3RkqWPpdI=",
+  "Source": "SmartParking.Api",
+  "BasePath": "_content/SmartParking.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

@@ -1,0 +1,484 @@
+@host = http://localhost:5137
+
+### ============================================================
+### 1. ĐĂNG NHẬP & PHÂN QUYỀN RBAC (JWT AUTHENTICATION)
+### ============================================================
+
+### 1.1 Đăng nhập Khách hàng 1 (Customer 01)
+# @name loginCustomer1
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "customer01",
+  "password": "Customer@123"
+}
+
+### Lưu token Customer 01
+@customer1Token = {{loginCustomer1.response.body.accessToken}}
+
+### 1.2 Đăng nhập Khách hàng 2 (Customer 02 - Dùng kiểm thử chéo quyền sở hữu BOLA)
+# @name loginCustomer2
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "customer02",
+  "password": "Customer02@123"
+}
+
+### Lưu token Customer 02
+@customer2Token = {{loginCustomer2.response.body.accessToken}}
+
+### 1.3 Đăng nhập Nhân viên trực bãi (Staff 01)
+# @name loginStaff
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "staff01",
+  "password": "Staff@123"
+}
+
+### Lưu token Staff
+@staffToken = {{loginStaff.response.body.accessToken}}
+
+### 1.4 Đăng nhập Quản trị viên (Admin)
+# @name loginAdmin
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
+
+### Lưu token Admin
+@adminToken = {{loginAdmin.response.body.accessToken}}
+
+### ============================================================
+### 2. ĐẶT CHỖ THEO GIỜ & GIỮ Ô (BOOKING & HOLD)
+### ============================================================
+
+### 2.1 Customer 01 đặt chỗ trước giữ ô E7 (2 giờ tới, gói 2 giờ)
+# @name createBooking
+POST {{host}}/api/bookings
+Authorization: Bearer {{customer1Token}}
+Content-Type: application/json
+
+{
+  "thoiGianHenT": "{{$datetime iso8601 2 h}}",
+  "goiThoiLuongGio": 2,
+  "loaiKhach": "DAT_TRUOC",
+  "danhSachViTri": [
+    {
+      "maViTri": "E7",
+      "bienSo": "51G-123.45"
+    }
+  ],
+  "ghiChu": "Khách 01 đặt trước ô E7 qua ứng dụng"
+}
+
+### Lưu ID đơn và mã giao dịch duy nhất
+@orderId = {{createBooking.response.body.maDon}}
+@txnCode = {{createBooking.response.body.maGiaoDichDuyNhat}}
+
+### 2.2 Thử đặt trùng ô E7 cùng khung giờ (Kỳ vọng: 409 Conflict)
+POST {{host}}/api/bookings
+Authorization: Bearer {{customer2Token}}
+Content-Type: application/json
+
+{
+  "thoiGianHenT": "{{$datetime iso8601 2 h}}",
+  "goiThoiLuongGio": 1,
+  "loaiKhach": "DAT_TRUOC",
+  "danhSachViTri": [
+    {
+      "maViTri": "E7",
+      "bienSo": "51H-999.99"
+    }
+  ]
+}
+
+### 2.3 Thử đặt ô E7 vi phạm khoảng đệm an toàn MinGap 15 phút (Kỳ vọng: 409 Conflict)
+POST {{host}}/api/bookings
+Authorization: Bearer {{customer2Token}}
+Content-Type: application/json
+
+{
+  "thoiGianHenT": "{{$datetime iso8601 4 h}}",
+  "goiThoiLuongGio": 1,
+  "loaiKhach": "DAT_TRUOC",
+  "danhSachViTri": [
+    {
+      "maViTri": "E7",
+      "bienSo": "51H-888.88"
+    }
+  ]
+}
+
+### 2.4 Thử đặt chỗ trong quá khứ (Kỳ vọng: 400 Bad Request)
+POST {{host}}/api/bookings
+Authorization: Bearer {{customer1Token}}
+Content-Type: application/json
+
+{
+  "thoiGianHenT": "{{$datetime iso8601 -2 h}}",
+  "goiThoiLuongGio": 1,
+  "loaiKhach": "DAT_TRUOC",
+  "danhSachViTri": [
+    {
+      "maViTri": "E2",
+      "bienSo": "51A-999.99"
+    }
+  ]
+}
+
+### 2.5 Đặt chỗ khách vãng lai (VANG_LAI) vào thẳng
+POST {{host}}/api/bookings
+Authorization: Bearer {{customer1Token}}
+Content-Type: application/json
+
+{
+  "thoiGianHenT": "{{$datetime iso8601}}",
+  "goiThoiLuongGio": 1,
+  "loaiKhach": "VANG_LAI",
+  "danhSachViTri": [
+    {
+      "maViTri": "E1",
+      "bienSo": "51F-333.33"
+    }
+  ]
+}
+
+### ============================================================
+### 3. BẢO MẬT THANH TOÁN (2 ĐƯỜNG TÁCH BIỆT: DEMO VÀ WEBHOOK THẬT)
+### ============================================================
+
+### --- ĐƯỜNG A: ENDPOINT DEMO SIMULATION (Gated by DemoMode = true) ---
+
+### 3.1 Khách hàng Customer 02 cố tình thanh toán đơn của Customer 01 (Kỳ vọng: 404 Not Found - Chống BOLA)
+POST {{host}}/api/demo/payment/{{orderId}}/simulate-success
+Authorization: Bearer {{customer2Token}}
+
+### 3.2 Khách hàng Customer 01 thanh toán đơn của chính mình (Lần 1 -> PAID, sinh EntryCode QR mở barie)
+# @name demoPaySuccess
+POST {{host}}/api/demo/payment/{{orderId}}/simulate-success
+Authorization: Bearer {{customer1Token}}
+
+### 3.3 Gọi lại thanh toán đơn lần 2 (Idempotency -> 200 OK không trừ tiền/không nhân đôi thanh toán)
+POST {{host}}/api/demo/payment/{{orderId}}/simulate-success
+Authorization: Bearer {{customer1Token}}
+
+### 3.4 Khách hàng xem lại đơn để lấy EntryCode (Mã vào cổng mở barie)
+GET {{host}}/api/bookings/{{orderId}}
+Authorization: Bearer {{customer1Token}}
+
+
+### --- ĐƯỜNG B: WEBHOOK NGÂN HÀNG THẬT (BẮT BUỘC CHỮ KÝ HMAC-SHA256 & TIMESTAMP) ---
+
+### 3.5 Webhook thiếu chữ ký X-Signature hoặc timestamp (Kỳ vọng: 401 Unauthorized)
+POST {{host}}/api/payment/webhook/bank-transfer
+Content-Type: application/json
+
+{
+  "maGiaoDichDuyNhat": "{{txnCode}}",
+  "soTien": 20000,
+  "noiDungChuyenKhoan": "Chuyen khoan thanh toan do xe"
+}
+
+### 3.6 Webhook có chữ ký giả mạo / không đúng bí mật (Kỳ vọng: 401 Unauthorized)
+POST {{host}}/api/payment/webhook/bank-transfer
+X-Signature: a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90
+X-Timestamp: {{$timestamp}}
+Content-Type: application/json
+
+{
+  "maGiaoDichDuyNhat": "{{txnCode}}",
+  "soTien": 20000,
+  "noiDungChuyenKhoan": "Gia mao chu ky Webhook"
+}
+
+### 3.7 Webhook sai số tiền so với đơn hàng (Kỳ vọng: 400 Bad Request)
+POST {{host}}/api/payment/webhook/bank-transfer
+X-Signature: a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90
+X-Timestamp: {{$timestamp}}
+Content-Type: application/json
+
+{
+  "maGiaoDichDuyNhat": "{{txnCode}}",
+  "soTien": 99999,
+  "noiDungChuyenKhoan": "Chuyen khoan sai so tien"
+}
+
+### ============================================================
+### 4. THANH TOÁN TIỀN MẶT (CASHCODE BĂM SHA256, DÙNG 1 LẦN, KHÓA SAU 5 LẦN SAI)
+### ============================================================
+
+### 4.1 Khách hàng Customer 01 tạo đơn mới cho ô E8
+# @name createCashBooking
+POST {{host}}/api/bookings
+Authorization: Bearer {{customer1Token}}
+Content-Type: application/json
+
+{
+  "thoiGianHenT": "{{$datetime iso8601 3 h}}",
+  "goiThoiLuongGio": 1,
+  "loaiKhach": "DAT_TRUOC",
+  "danhSachViTri": [
+    {
+      "maViTri": "E8",
+      "bienSo": "51K-777.77"
+    }
+  ]
+}
+
+@cashOrderId = {{createCashBooking.response.body.maDon}}
+
+### 4.2 Khách hàng cố tình gọi API tạo CashCode của Staff (Kỳ vọng: 403 Forbidden)
+POST {{host}}/api/payment/cash/confirm
+Authorization: Bearer {{customer1Token}}
+Content-Type: application/json
+
+{
+  "maDon": {{cashOrderId}}
+}
+
+### 4.3 Nhân viên Staff trực bãi xác nhận thu tiền mặt và tạo CashCode
+# @name staffCashConfirm
+POST {{host}}/api/payment/cash/confirm
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "maDon": {{cashOrderId}}
+}
+
+@cashCode = {{staffCashConfirm.response.body.cashCode}}
+
+### 4.4 Customer 02 cố tình quy đổi mã CashCode của Customer 01 (Kỳ vọng: 404 Not Found - BOLA)
+POST {{host}}/api/payment/cash/redeem
+Authorization: Bearer {{customer2Token}}
+Content-Type: application/json
+
+{
+  "maDon": {{cashOrderId}},
+  "maCashCode": "{{cashCode}}"
+}
+
+### 4.5 Khách hàng Customer 01 nhập mã CashCode sai (Kỳ vọng: 400 Bad Request, báo số lần thử còn lại)
+POST {{host}}/api/payment/cash/redeem
+Authorization: Bearer {{customer1Token}}
+Content-Type: application/json
+
+{
+  "maDon": {{cashOrderId}},
+  "maCashCode": "CASH-WRONG-CODE"
+}
+
+### 4.6 Khách hàng Customer 01 nhập đúng mã CashCode (Kỳ vọng: 200 OK -> PAID & sinh EntryCode)
+POST {{host}}/api/payment/cash/redeem
+Authorization: Bearer {{customer1Token}}
+Content-Type: application/json
+
+{
+  "maDon": {{cashOrderId}},
+  "maCashCode": "{{cashCode}}"
+}
+
+### 4.7 Khách hàng nhập lại CashCode lần 2 (Kỳ vọng: 400 Bad Request - Mã đã sử dụng)
+POST {{host}}/api/payment/cash/redeem
+Authorization: Bearer {{customer1Token}}
+Content-Type: application/json
+
+{
+  "maDon": {{cashOrderId}},
+  "maCashCode": "{{cashCode}}"
+}
+
+### ============================================================
+### 5. HỦY ĐƠN ĐẶT CHỖ & KIỂM SOÁT QUYỀN TRUY CẬP (OWASP BOLA)
+### ============================================================
+
+### 5.1 Tạo đơn đặt chỗ mới để thử nghiệm hủy đơn
+# @name createCancelBooking
+POST {{host}}/api/bookings
+Authorization: Bearer {{customer1Token}}
+Content-Type: application/json
+
+{
+  "thoiGianHenT": "{{$datetime iso8601 5 h}}",
+  "goiThoiLuongGio": 1,
+  "loaiKhach": "DAT_TRUOC",
+  "danhSachViTri": [
+    {
+      "maViTri": "A4",
+      "bienSo": "51F-444.44"
+    }
+  ]
+}
+
+@cancelOrderId = {{createCancelBooking.response.body.maDon}}
+
+### 5.2 Customer 02 cố tình hủy đơn của Customer 01 (Kỳ vọng: 404 Not Found)
+POST {{host}}/api/bookings/{{cancelOrderId}}/cancel
+Authorization: Bearer {{customer2Token}}
+
+### 5.3 Customer 01 hủy đơn PENDING_PAYMENT của chính mình (Kỳ vọng: 200 OK, giải phóng ô A4 về FREE)
+POST {{host}}/api/bookings/{{cancelOrderId}}/cancel
+Authorization: Bearer {{customer1Token}}
+
+### 5.4 Cố tình hủy lại đơn đã CANCELLED (Kỳ vọng: 400 Bad Request)
+POST {{host}}/api/bookings/{{cancelOrderId}}/cancel
+Authorization: Bearer {{customer1Token}}
+
+### 5.5 Customer 02 cố tình đọc chi tiết đơn của Customer 01 (Kỳ vọng: 404 Not Found - Chống ID enumeration)
+GET {{host}}/api/bookings/{{orderId}}
+Authorization: Bearer {{customer2Token}}
+
+### 5.6 Staff đọc chi tiết đơn của Customer 01 (Kỳ vọng: 200 OK - Nhân viên có quyền xem mọi đơn)
+GET {{host}}/api/bookings/{{orderId}}
+Authorization: Bearer {{staffToken}}
+
+### 5.7 Yêu cầu API không có Token Authorization (Kỳ vọng: 401 Unauthorized)
+GET {{host}}/api/bookings/{{orderId}}
+
+### 5.8 Khách hàng xem danh sách tất cả các đơn của mình
+GET {{host}}/api/bookings/my-bookings
+Authorization: Bearer {{customer1Token}}
+
+### ============================================================
+### 6. NGHIỆP VỤ CHECK-IN HAI BƯỚC, BÃI ĐÔNG, KẸT XE & CỔNG RA (PHASE 2B)
+### ============================================================
+
+### 6.1a Khách hàng Customer cố tự gọi /api/gate/in/scan (Kỳ vọng: 403 Forbidden - Khách không được tự gọi cổng)
+POST {{host}}/api/gate/in/scan
+Authorization: Bearer {{customer1Token}}
+Content-Type: application/json
+
+{
+  "entryCode": "{{entryCode}}",
+  "bienSo": "51A-123.45"
+}
+
+### 6.1b Nhân viên Staff quét sai biển số tại cổng vào (Kỳ vọng: 400 Bad Request - Còn 2 lần thử)
+POST {{host}}/api/gate/in/scan
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "entryCode": "{{entryCode}}",
+  "bienSo": "51A-999.99"
+}
+
+### 6.2 Nhân viên Staff quét đúng EntryCode và đúng biển số (Kỳ vọng: 200 OK, mở cổng trong GateTransitSec = 60s)
+# @name scanGateInSuccess
+POST {{host}}/api/gate/in/scan
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "entryCode": "{{entryCode}}",
+  "bienSo": "51A-123.45"
+}
+
+### 6.3a Khách hàng (Customer) cố tự gọi /api/gate/in/pass (Kỳ vọng: 403 Forbidden - Khách không được tự bấm vượt cổng)
+POST {{host}}/api/gate/in/pass
+Authorization: Bearer {{customer1Token}}
+Content-Type: application/json
+
+{
+  "orderId": {{orderId}}
+}
+
+### 6.3b Nhân viên cổng (Staff) hoặc Cảm biến barie xác nhận PASS qua cổng (Kỳ vọng: 200 OK, đơn sang ENTERED)
+# @name passGateIn
+POST {{host}}/api/gate/in/pass
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "orderId": {{orderId}}
+}
+
+### 6.3c Hoặc kích hoạt PASS qua Endpoint Demo khi DemoMode=true (Kỳ vọng: 200 OK)
+POST {{host}}/api/demo/gate/pass
+Content-Type: application/json
+
+{
+  "gate": "IN",
+  "orderId": {{orderId}}
+}
+
+### 6.4 Nút "Tôi đang kẹt" trên App khách: Gia hạn thêm 5 phút tìm ô (Kỳ vọng: 200 OK, hạn vào ô tăng thêm 5 phút)
+POST {{host}}/api/bookings/{{orderId}}/report-traffic-jam
+Authorization: Bearer {{customer1Token}}
+
+### 6.5 Khách bấm lại nút "Tôi đang kẹt" lần 2 (Kỳ vọng: 400 Bad Request - Vượt quá số lượt cho phép MaxExtensions = 1)
+POST {{host}}/api/bookings/{{orderId}}/report-traffic-jam
+Authorization: Bearer {{customer1Token}}
+
+### 6.6a Khách hàng cố gọi /api/checkpoint/CP1/pass (Kỳ vọng: 403 Forbidden - Khách không được tự kích hoạt checkpoint)
+POST {{host}}/api/checkpoint/CP1/pass
+Authorization: Bearer {{customer1Token}}
+Content-Type: application/json
+
+{
+  "checkpointId": "CP1",
+  "orderId": {{orderId}}
+}
+
+### 6.6b Nhân viên / Thiết bị gửi qua /api/checkpoint/CP1/pass (Kỳ vọng: 200 OK, tự động gia hạn thêm 5 phút)
+POST {{host}}/api/checkpoint/CP1/pass
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "checkpointId": "CP1",
+  "orderId": {{orderId}}
+}
+
+### 6.7 Xe vào bãi nhưng ra khi chưa đỗ vào ô (Kỳ vọng: 200 OK, đơn chuyển ABANDONED, nhả ô đỗ về FREE, mở barie ra)
+POST {{host}}/api/gate/out/scan
+Content-Type: application/json
+
+{
+  "orderId": {{orderId}},
+  "bienSo": "51A-123.45"
+}
+
+### 6.8 Kiểm tra lại đơn hàng sau khi ra cổng (Kỳ vọng: 200 OK, trạng thái ABANDONED hoặc COMPLETED)
+GET {{host}}/api/bookings/{{orderId}}
+Authorization: Bearer {{customer1Token}}
+
+### 6.9 Check-in bằng Mock ALPR nhận diện ảnh (imageFileName)
+POST {{host}}/api/gate/in/scan
+Content-Type: application/json
+
+{
+  "entryCode": "{{entryCode}}",
+  "imageFileName": "scan_51A-123.45_camera01.jpg"
+}
+
+### 6.10 Mở khóa EntryCode bị khóa do vượt quá số lần quét sai (Role: Staff)
+POST {{host}}/api/gate/entry-code/{{entryCode}}/unlock
+Authorization: Bearer {{staffToken}}
+
+### 6.11 Nhân viên xác nhận thu phí phạt quá giờ OVERSTAY tại cổng ra (Role: Staff)
+POST {{host}}/api/gate/out/overstay/confirm
+Authorization: Bearer {{staffToken}}
+Content-Type: application/json
+
+{
+  "orderId": {{orderId}},
+  "amountPaid": 30000,
+  "staffNote": "Đã thu tiền mặt phí phạt quá giờ 30 phút"
+}
+
+### 6.12 Mô phỏng xe vào ô ảo (hàng A-D) khi ô đang GUIDING (DemoMode = true)
+POST {{host}}/api/demo/virtual-slot/car-enter
+Content-Type: application/json
+
+{
+  "slotId": "A1"
+}
